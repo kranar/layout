@@ -19,5 +19,8 @@ class Equation(Statement):
   def visit(self, visitor):
     return visitor.visit_equation(self)
 
+  def __eq__(self, right):
+    return self._expression == right._expression
+
   def __str__(self):
     return f'{self._expression} = 0'

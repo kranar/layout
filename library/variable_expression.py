@@ -17,5 +17,8 @@ class VariableExpression(Expression):
   def visit(self, visitor):
     return visitor.visit_variable(self)
 
+  def __eq__(self, right):
+    return self._name == right._name
+
   def __str__(self):
     return self._name

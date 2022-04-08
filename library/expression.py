@@ -49,3 +49,9 @@ class Expression(Statement):
     if isinstance(left, Expression):
       return DivisionExpression(left, self)
     return LiteralExpression(left) / self
+
+from library.addition_expression import *
+from library.division_expression import *
+from library.literal_expression import *
+from library.multiplication_expression import *
+from library.subtraction_expression import *

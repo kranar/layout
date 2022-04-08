@@ -22,5 +22,8 @@ class LiteralExpression(Expression):
   def visit(self, visitor):
     return visitor.visit_literal(self)
 
+  def __eq__(self, right):
+    return self._value == right._value
+
   def __str__(self):
     return str(self._value)

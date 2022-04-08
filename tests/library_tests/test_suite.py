@@ -1,10 +1,12 @@
 import unittest
 
-from tests.parser_tests.parser_tester import ParserTester
+from tests.library_tests.manipulations_tester import ManipulationsTester
+from tests.library_tests.parser_tester import ParserTester
 
 
 def suite():
   suite = unittest.TestSuite()
+  suite.addTest(unittest.makeSuite(ManipulationsTester))
   suite.addTest(unittest.makeSuite(ParserTester))
   return suite
 

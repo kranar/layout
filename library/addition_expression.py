@@ -26,5 +26,8 @@ class AdditionExpression(Expression):
   def visit(self, visitor):
     return visitor.visit_addition(self)
 
+  def __eq__(self, right):
+    return self._left == right._left and self._right == right._right
+
   def __str__(self):
     return f'({self.left} + {self.right})'

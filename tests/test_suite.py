@@ -1,11 +1,11 @@
 import unittest
 
-from parser_tests.test_suite import suite as ParserSuite
+from library_tests.test_suite import suite as LibrarySuite
 
 
 def suite():
   suite = unittest.TestSuite()
-  suite.addTests(ParserSuite())
+  suite.addTests(LibrarySuite())
   return suite
 
 

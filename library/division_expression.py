@@ -27,7 +27,8 @@ class DivisionExpression(Expression):
     return visitor.visit_division(self)
 
   def __eq__(self, right):
-    return self._left == right._left and self._right == right._right
+    return isinstance(right, DivisionExpression) and \
+      self._left == right._left and self._right == right._right
 
   def __str__(self):
     return f'({self.left} / {self.right})'

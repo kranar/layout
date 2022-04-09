@@ -23,7 +23,7 @@ class LiteralExpression(Expression):
     return visitor.visit_literal(self)
 
   def __eq__(self, right):
-    return self._value == right._value
+    return isinstance(right, LiteralExpression) and self._value == right._value
 
   def __str__(self):
     return str(self._value)

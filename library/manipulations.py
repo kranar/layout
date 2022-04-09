@@ -5,6 +5,7 @@ from library import SubtractionExpression
 
 
 def expand(expression):
+  '''Expands an expression by distributing all multiplications and divisions.'''
   class Visitor(StatementVisitor):
     def visit_expression(self, expression):
       return expression
@@ -38,8 +39,7 @@ def expand(expression):
           (expression.left.right / expression.right)))
       else:
         result = expand(expression.left) / expand(expression.right)
-        if type(result.left) in distributive_operators or \
-            type(result.right) in distributive_operators:
+        if type(result.left) in distributive_operators:
           return expand(result)
         return result
   return expression.visit(Visitor())

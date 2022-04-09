@@ -46,6 +46,9 @@ def expand(expression):
 
 
 def substitute(variable, substitution, expression):
+  '''
+  Replaces all VariableExpressions with a substitution in a given expression.
+  '''
   class Visitor(StatementVisitor):
     def __init__(self, variable, substitution):
       self._variable = variable

@@ -59,10 +59,18 @@ def find_coefficients(expression):
       return coefficients
 
     def visit_division(self, expression):
-      coefficient = evaluate_constants(expression.right)
-      if type(expression.left) is VariableExpression:
-        return {expression.left.name: 1.0 / coefficient}
-      return {'': evaluate_constants(expression.left) / coefficient}
+      left = find_coefficients(expression.left)
+      denominator = evaluate_constants(expression.right)
+      has_variable = False
+      for variable in left:
+        if variable != '':
+          term = left[variable]
+          left = {variable: term / denominator}
+          has_variable = True
+          break
+      if not has_variable:
+        left = {'': left.get('', 0) / denominator}
+      return left
 
     def visit_variable(self, expression):
       return {expression.name: 1}
@@ -91,8 +99,8 @@ def build_from_coefficients(coefficients):
 
 
 def solve(system):
+  coefficients = find_coefficients(expand(system.constraints[0].expression))
   if len(system.constraints) == 1:
-    coefficients = find_coefficients(expand(system.constraints[0].expression))
     constant = 0
     for key in coefficients:
       if key == '':
@@ -101,7 +109,6 @@ def solve(system):
         variable = key
         coefficient = coefficients[key]
     return {variable: -constant / coefficient}
-  coefficients = find_coefficients(expand(system.constraints[0].expression))
   for key in coefficients:
     if key != '':
       target = key
@@ -113,5 +120,9 @@ def solve(system):
   for constraint in system.constraints[1:]:
     substitutions.append(substitute(target, substitution, constraint))
   solution = solve(ConstraintSystem(substitutions))
-  print(solution)
-  return {}
+  top_constraint = system.constraints[0]
+  for term in solution:
+    top_constraint = substitute(
+      term, LiteralExpression(solution[term]), top_constraint)
+  top_solution = solve(ConstraintSystem([top_constraint]))
+  return solution | top_solution

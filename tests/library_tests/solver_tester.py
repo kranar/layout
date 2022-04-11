@@ -108,6 +108,15 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertEqual(solution, {})
 
+  def test_cancelling_out(self):
+    equations = []
+    equations.append(Equation(x + y))
+    equations.append(Equation(y - y + x + 2))
+    equations.append(Equation(x - x + y - 2))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertEqual(solution, {'x': -2, 'y': 2})
+
   def test_layout_solution(self):
     equations = []
     a_top = VariableExpression('A.top')
@@ -140,7 +149,11 @@ class SolverTester(unittest.TestCase):
     equations.append(Equation(c_width - 100))
     system = ConstraintSystem(equations)
     solution = solve(system)
-
+    self.assertSolutionEqual(solution,
+      {width.name: 1000, height.name: 200,
+       a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
+       b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
+       c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200})
 
 if __name__ == '__main__':
   unittest.main()

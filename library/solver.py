@@ -117,23 +117,30 @@ def solve(system):
         variable = key
         coefficient = coefficients[key]
     if variable is None:
+      if constant == 0:
+        return {'': 0}
       return None
     if coefficient == 0:
       return {}
     return {variable: -constant / coefficient}
   for key in coefficients:
-    if key != '':
+    if key != '' and coefficients[key] != 0:
       target = key
       break
   coefficient = coefficients[target]
   del coefficients[target]
-  substitution = -1 * (build_from_coefficients(coefficients) / coefficient)
+  if coefficient == 1:
+    substitution = -1 * build_from_coefficients(coefficients)
+  else:
+    substitution = -1 * (build_from_coefficients(coefficients) / coefficient)
   substitutions = []
   for constraint in system.constraints[1:]:
     substitutions.append(substitute(target, substitution, constraint))
   solution = solve(ConstraintSystem(substitutions))
   if solution is None or solution == {}:
     return solution
+  if '' in solution:
+    del solution['']
   top_constraint = system.constraints[0]
   for term in solution:
     top_constraint = substitute(

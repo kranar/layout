@@ -83,6 +83,31 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertSolutionEqual(solution, {'x': 1, 'y': -1, 'z': 2})
 
+  def test_no_solution(self):
+    equations = []
+    equations.append(Equation(x + 1))
+    equations.append(Equation(x + 2))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertEqual(solution, None)
+
+  def test_no_solution_multiple_variables(self):
+    equations = []
+    equations.append(Equation(x + y - 1))
+    equations.append(Equation(2 * x + y - 1))
+    equations.append(Equation(3 * x + 2 * y - 3))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertEqual(solution, None)
+
+  def test_ambiguous_solution(self):
+    equations = []
+    equations.append(Equation(x + y))
+    equations.append(Equation(2 * x + 2 * y))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertEqual(solution, {})
+
 
 if __name__ == '__main__':
   unittest.main()

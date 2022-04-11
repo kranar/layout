@@ -99,15 +99,25 @@ def build_from_coefficients(coefficients):
 
 
 def solve(system):
+  '''
+  Takes a ConstraintSystem and returns a dict whose keys are variable names and
+  values are the solution to the given system. If no solution exists None is
+  returned, if the solution is infinite then an empty dict is returned.
+  '''
   coefficients = find_coefficients(expand(system.constraints[0].expression))
   if len(system.constraints) == 1:
     constant = 0
+    variable = None
     for key in coefficients:
       if key == '':
         constant = coefficients[key]
       else:
         variable = key
         coefficient = coefficients[key]
+    if variable is None:
+      return None
+    if coefficient == 0:
+      return {}
     return {variable: -constant / coefficient}
   for key in coefficients:
     if key != '':
@@ -120,6 +130,8 @@ def solve(system):
   for constraint in system.constraints[1:]:
     substitutions.append(substitute(target, substitution, constraint))
   solution = solve(ConstraintSystem(substitutions))
+  if solution is None or solution == {}:
+    return solution
   top_constraint = system.constraints[0]
   for term in solution:
     top_constraint = substitute(

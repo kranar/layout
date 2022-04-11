@@ -56,7 +56,6 @@ class LayoutWidget(tk.Frame):
     system = ConstraintSystem(components)
     solution = solve(system)
     components = parse_components(solution)
-    print(components)
     self._canvas.delete('all')
     for component in components:
       self._canvas.create_rectangle(
@@ -90,20 +89,23 @@ class LayoutExpression:
 
 def main():
   window = tk.Tk()
-  components = []
-  a = LayoutExpression('A')
-  b = LayoutExpression('B')
-  width = VariableExpression('width')
-  height = VariableExpression('height')
-  components.append(Equation(a.width - 100))
-  components.append(Equation(a.height - 100))
-  components.append(Equation(a.top))
-  components.append(Equation(a.left))
-  components.append(Equation(b.height - 100))
-  components.append(Equation(b.top))
-  components.append(Equation(b.left - (a.left + a.width)))
-  components.append(Equation(a.width + b.width - width))
-  LayoutWidget(window, components).place(x=0, y=0, relwidth=1, relheight=1)
+  system = parse(
+    '''
+    A.width = 100
+    A.height = 100
+    A.top = 0
+    A.left = 0
+    B.height = 100
+    B.top = 0
+    B.left = A.left + A.width
+    C.width = 100
+    C.height = 100
+    C.top = 0
+    C.left = B.left + B.width
+    A.width + B.width + C.width = width
+    ''')
+  LayoutWidget(window, system.constraints).place(
+    x=0, y=0, relwidth=1, relheight=1)
   window.mainloop()
 
 

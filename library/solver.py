@@ -95,6 +95,8 @@ def build_from_coefficients(coefficients):
       expression = extension
     else:
       expression += extension
+  if expression is None:
+    return LiteralExpression(0)
   return expression
 
 

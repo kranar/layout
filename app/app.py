@@ -41,6 +41,13 @@ def parse_components(solution):
   return [value for value in items.values()]
 
 
+def has_underflow(components, width, height):
+  area = 0
+  for component in components:
+    area += component.width * component.height
+  return area != width * height
+
+
 class LayoutWidget(tk.Frame):
   def __init__(self, parent, components):
     tk.Frame.__init__(self, parent)
@@ -48,6 +55,8 @@ class LayoutWidget(tk.Frame):
     self._canvas = tk.Canvas(self)
     self._canvas.pack(fill=tk.BOTH, expand=tk.YES)
     self._canvas.bind('<Configure>', self.on_resize)
+    self._height = self.winfo_reqheight()
+    self._width = self.winfo_reqwidth()
 
   def on_resize(self, event):
     components = self._components.copy()
@@ -56,6 +65,11 @@ class LayoutWidget(tk.Frame):
     system = ConstraintSystem(components)
     solution = solve(system)
     components = parse_components(solution)
+    if has_underflow(components, event.width, event.height):
+      self.config(width=self._width, height=self._height)
+      return
+    self._width = event.width
+    self._height = event.height
     self._canvas.delete('all')
     for component in components:
       self._canvas.create_rectangle(
@@ -89,20 +103,41 @@ class LayoutExpression:
 
 def main():
   window = tk.Tk()
+
+  def foo():
+    system = parse(
+      '''
+      A.width = 100
+      A.height = 100
+      A.top = 0
+      A.left = 0
+      B.height = 100
+      B.top = 0
+      B.left = A.left + A.width
+      C.width = 100
+      C.height = 100
+      C.top = 0
+      C.left = B.left + B.width
+      A.width + B.width + C.width = width
+      ''')
   system = parse(
     '''
-    A.width = 100
-    A.height = 100
     A.top = 0
     A.left = 0
-    B.height = 100
+    A.width = 100
+    A.height = 100
     B.top = 0
     B.left = A.left + A.width
-    C.width = 100
-    C.height = 100
-    C.top = 0
-    C.left = B.left + B.width
-    A.width + B.width + C.width = width
+    C.left = 0
+    C.top = A.top + A.height
+    D.top = B.top + B.height
+    D.left = C.left + C.width
+    D.width = 100
+    D.height = 100
+    A.width + B.width = width
+    A.height + C.height = height
+    C.width + D.width = width
+    B.height + D.height = height
     ''')
   LayoutWidget(window, system.constraints).place(
     x=0, y=0, relwidth=1, relheight=1)

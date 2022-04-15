@@ -3,20 +3,10 @@ import sys
 sys.path.insert(
   0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import json
 import tkinter as tk
 
 from library import *
-
-
-class LayoutItem:
-  def __init__(self, top=0, left=0, width=0, height=0):
-    self.top = top
-    self.left = left
-    self.width = width
-    self.height = height
-
-  def __repr__(self):
-    return f'LayoutItem({self.top}, {self.left}, {self.width}, {self.height})'
 
 
 def parse_components(solution):
@@ -27,7 +17,7 @@ def parse_components(solution):
       continue
     name = case[0:name_index]
     if name not in items:
-      items[name] = LayoutItem()
+      items[name] = LayoutItem(name)
     item = items[name]
     property = case[name_index + 1:]
     if property == 'top':
@@ -39,13 +29,6 @@ def parse_components(solution):
     elif property == 'height':
       item.height = solution[case]
   return [value for value in items.values()]
-
-
-def has_underflow(components, width, height):
-  area = 0
-  for component in components:
-    area += component.width * component.height
-  return area != width * height
 
 
 class LayoutWidget(tk.Frame):
@@ -65,8 +48,8 @@ class LayoutWidget(tk.Frame):
     system = ConstraintSystem(components)
     solution = solve(system)
     components = parse_components(solution)
-    if has_underflow(components, event.width, event.height):
-      self.config(width=self._width, height=self._height)
+    if check_is_fit(components, event.width, event.height):
+      self.master.geometry(f'{self._width}x{self._height}')
       return
     self._width = event.width
     self._height = event.height
@@ -77,68 +60,83 @@ class LayoutWidget(tk.Frame):
         component.top + component.height, fill='red', outline='black')
 
 
-class LayoutExpression:
-  def __init__(self, name):
-    self._width = VariableExpression(f'{name}.width')
-    self._height = VariableExpression(f'{name}.height')
-    self._top = VariableExpression(f'{name}.top')
-    self._left = VariableExpression(f'{name}.left')
+def parse_policy(source):
+  if source == 'fixed':
+    return LayoutPolicy.FIXED
+  elif source == 'expanding':
+    return LayoutPolicy.EXPANDING
 
-  @property
-  def width(self):
-    return self._width
 
-  @property
-  def height(self):
-    return self._height
+def parse_size(source):
+  tokens = source.split(' ')
+  if len(tokens) == 1:
+    return (int(tokens[0]), LayoutPolicy.FIXED)
+  elif len(tokens) == 2:
+    return (int(tokens[0]), parse_policy(tokens[1]))
 
-  @property
-  def top(self):
-    return self._top
 
-  @property
-  def left(self):
-    return self._left
+def parse_layout_items(source):
+  items = []
+  unnamed_count = 0
+  for layout in source['layout']:
+    if 'name' in layout:
+      name = layout['name']
+    else:
+      name = f'@unnamed_{unnamed_count}'
+      unnamed_count += 1
+    item = LayoutItem(name)
+    item.top = layout['top']
+    item.left = layout['left']
+    width = parse_size(layout['width'])
+    item.width = width[0]
+    item.width_policy = width[1]
+    height = parse_size(layout['height'])
+    item.height = height[0]
+    item.height_policy = height[1]
+    items.append(item)
+  return items
+
+
+def parse_system(items):
+  top_items = sorted(items, key=lambda x: (x.top, x.left))
+  constraints = []
+  last_item = None
+  for item in top_items:
+    if item.left == 0:
+      constraints.append(Equation(VariableExpression(item.name + '.left'))) 
+    elif last_item is not None:
+      constraints.append(Equation(
+        VariableExpression(item.name + '.left') -
+        (VariableExpression(last_item.name + '.left') +
+        VariableExpression(last_item.name + '.width'))))
+    if item.top == 0:
+      constraints.append(Equation(VariableExpression(item.name + '.top')))
+    if item.width_policy == LayoutPolicy.FIXED:
+      constraints.append(
+        Equation(VariableExpression(item.name + '.width') - item.width))
+    if item.height_policy == LayoutPolicy.FIXED:
+      constraints.append(
+        Equation(VariableExpression(item.name + '.height') - item.height))
+    last_item = item
+  width_sum = None
+  for item in top_items:
+    if item.top == 0:
+      extension = VariableExpression(item.name + '.width')
+    if width_sum is None:
+      width_sum = extension
+    else:
+      width_sum += extension
+  width_sum -= VariableExpression('width')
+  constraints.append(Equation(width_sum))
+  system = ConstraintSystem(constraints)
+  return ConstraintSystem(constraints)
 
 
 def main():
+  items = parse_layout_items(json.load(open(sys.argv[1])))
+  system = parse_system(items)
   window = tk.Tk()
-
-  def foo():
-    system = parse(
-      '''
-      A.width = 100
-      A.height = 100
-      A.top = 0
-      A.left = 0
-      B.height = 100
-      B.top = 0
-      B.left = A.left + A.width
-      C.width = 100
-      C.height = 100
-      C.top = 0
-      C.left = B.left + B.width
-      A.width + B.width + C.width = width
-      ''')
-  system = parse(
-    '''
-    A.top = 0
-    A.left = 0
-    A.width = 100
-    A.height = 100
-    B.top = 0
-    B.left = A.left + A.width
-    C.left = 0
-    C.top = A.top + A.height
-    D.top = B.top + B.height
-    D.left = C.left + C.width
-    D.width = 100
-    D.height = 100
-    A.width + B.width = width
-    A.height + C.height = height
-    C.width + D.width = width
-    B.height + D.height = height
-    ''')
+  window.geometry('200x100')
   LayoutWidget(window, system.constraints).place(
     x=0, y=0, relwidth=1, relheight=1)
   window.mainloop()

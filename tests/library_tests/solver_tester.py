@@ -13,58 +13,60 @@ z = VariableExpression('z')
 
 class SolverTester(unittest.TestCase):
   def assertSolutionEqual(self, actual, expected):
-    for key in actual:
-      self.assertAlmostEqual(actual[key], expected[key])
-    self.assertEqual(len(actual), len(expected))
+    self.assertEqual(len(actual.assignments), len(expected.assignments))
+    for key in actual.assignments:
+      self.assertAlmostEqual(actual.assignments[key], expected.assignments[key])
+    self.assertEqual(actual.inconsistencies, expected.inconsistencies)
+    self.assertEqual(actual.underdetermined, expected.underdetermined)
 
   def test_solve_single_variable(self):
     equations = []
     equations.append(Equation(x))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 0})
+    self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_addition(self):
     equations = []
     equations.append(Equation(x + 5))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': -5})
+    self.assertSolutionEqual(solution, Solution({'x': -5}))
 
   def test_solve_single_variable_subtraction(self):
     equations = []
     equations.append(Equation(x - 5))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 5})
+    self.assertSolutionEqual(solution, Solution({'x': 5}))
 
   def test_solve_single_variable_multiplication(self):
     equations = []
     equations.append(Equation(3 * x))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 0})
+    self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_division(self):
     equations = []
     equations.append(Equation(x / 6))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 0})
+    self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_multiply_and_add(self):
     equations = []
     equations.append(Equation(2 * x - 6))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 3})
+    self.assertSolutionEqual(solution, Solution({'x': 3}))
 
   def test_solve_single_variable_collect_terms(self):
     equations = []
     equations.append(Equation(2 * x - 6 * x + 12))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 3})
+    self.assertSolutionEqual(solution, Solution({'x': 3}))
 
   def test_solve_two_variables(self):
     equations = []
@@ -72,7 +74,7 @@ class SolverTester(unittest.TestCase):
     equations.append(Equation(2 * x + 3 * y - 1))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 2, 'y': -1})
+    self.assertSolutionEqual(solution, Solution({'x': 2, 'y': -1}))
 
   def test_solve_three_variables(self):
     equations = []
@@ -81,32 +83,42 @@ class SolverTester(unittest.TestCase):
     equations.append(Equation(2 * x - 5 * y + 5 * z - 17))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertSolutionEqual(solution, {'x': 1, 'y': -1, 'z': 2})
+    self.assertSolutionEqual(solution, Solution({'x': 1, 'y': -1, 'z': 2}))
 
-  def test_no_solution(self):
+  def test_single_variable_inconsistent_solution(self):
     equations = []
     equations.append(Equation(x + 1))
     equations.append(Equation(x + 2))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertEqual(solution, None)
+    self.assertSolutionEqual(solution, Solution(inconsistencies={'x'}))
 
-  def test_no_solution_multiple_variables(self):
+  def test_semiconsistent_solution(self):
+    equations = []
+    equations.append(Equation(x + 1))
+    equations.append(Equation(x + 2))
+    equations.append(Equation(y - 3))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertSolutionEqual(
+      solution, Solution(assignments={'y': 3}, inconsistencies={'x'}))
+
+  def test_inconsistent_solution_multiple_variables(self):
     equations = []
     equations.append(Equation(x + y - 1))
     equations.append(Equation(2 * x + y - 1))
     equations.append(Equation(3 * x + 2 * y - 3))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertEqual(solution, None)
+    self.assertSolutionEqual(solution, Solution(inconsistencies={'x', 'y'}))
 
-  def test_ambiguous_solution(self):
+  def test_underdetermined_solution(self):
     equations = []
     equations.append(Equation(x + y))
     equations.append(Equation(2 * x + 2 * y))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertEqual(solution, {})
+    self.assertSolutionEqual(solution, Solution(underdetermined={'x', 'y'}))
 
   def test_cancelling_out(self):
     equations = []
@@ -115,7 +127,7 @@ class SolverTester(unittest.TestCase):
     equations.append(Equation(x - x + y - 2))
     system = ConstraintSystem(equations)
     solution = solve(system)
-    self.assertEqual(solution, {'x': -2, 'y': 2})
+    self.assertEqual(solution, Solution({'x': -2, 'y': 2}))
 
   def test_layout_solution(self):
     equations = []
@@ -150,10 +162,11 @@ class SolverTester(unittest.TestCase):
     system = ConstraintSystem(equations)
     solution = solve(system)
     self.assertSolutionEqual(solution,
-      {width.name: 1000, height.name: 200,
+      Solution({width.name: 1000, height.name: 200,
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
-       c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200})
+       c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
+
 
 if __name__ == '__main__':
   unittest.main()

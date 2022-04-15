@@ -1,3 +1,5 @@
+import math
+
 from library import ConstraintSystem
 from library import LiteralExpression
 from library import StatementVisitor
@@ -100,6 +102,64 @@ def build_from_coefficients(coefficients):
   return expression
 
 
+class Solution:
+  '''Stores the solution to a ConstraintSystem.'''
+
+  def __init__(
+      self, assignments = {}, underdetermined = set(), inconsistencies = set()):
+    self._assignments = assignments.copy()
+    self._underdetermined = underdetermined.copy()
+    self._inconsistencies = inconsistencies.copy()
+
+  @property
+  def assignments(self):
+    return self._assignments
+
+  @property
+  def underdetermined(self):
+    return self._underdetermined
+
+  @property
+  def inconsistencies(self):
+    return self._inconsistencies
+
+  def merge(self, solution):
+    inconsistencies = self._inconsistencies | solution.inconsistencies
+    underdetermined = self._underdetermined | solution.underdetermined
+    assignments = {}
+    for assignment in self._assignments:
+      if assignment in inconsistencies:
+        continue
+      value = self._assignments[assignment]
+      if assignment in solution.assignments:
+        if not math.isclose(value, solution.assignments[assignment]):
+          inconsistencies.add(assignment)
+        else:
+          assignments[assignment] = value
+          if assignment in underdetermined:
+            underdetermined.remove(assignment)
+      else:
+        assignments[assignment] = value
+        if assignment in underdetermined:
+          underdetermined.remove(assignment)
+    for assignment in solution.assignments:
+      if assignment in inconsistencies:
+        continue
+      if assignment not in self._assignments:
+        assignments[assignment] = solution.assignments[assignment]
+        if assignment in underdetermined:
+          underdetermined.remove(assignment)
+    if '' in inconsistencies and len(inconsistencies) != 1:
+      inconsistencies.remove('')
+    return Solution(assignments, underdetermined, inconsistencies)
+
+  def __eq__(self, other):
+    return isinstance(other, Solution) and \
+      self._assignments == other._assignments and \
+      self._inconsistencies == other._inconsistencies and \
+      self._underdetermined == other._underdetermined
+
+
 def solve(system):
   '''
   Takes a ConstraintSystem and returns a dict whose keys are variable names and
@@ -118,15 +178,22 @@ def solve(system):
         coefficient = coefficients[key]
     if variable is None:
       if constant == 0:
-        return {'': 0}
-      return None
+        return Solution()
+      return Solution(inconsistencies={''})
     if coefficient == 0:
-      return {}
-    return {variable: -constant / coefficient}
+      return Solution(underdetermined={variable})
+    return Solution({variable: -constant / coefficient})
+  target = None
   for key in coefficients:
     if key != '' and coefficients[key] != 0:
       target = key
       break
+  if target is None:
+    solution = solve(ConstraintSystem(system.constraints[1:]))
+    if coefficients.get('', 0) == 0:
+      return solution
+    else:
+      return solution.merge(Solution(inconsistencies={''}))
   coefficient = coefficients[target]
   del coefficients[target]
   if coefficient == 1:
@@ -137,13 +204,11 @@ def solve(system):
   for constraint in system.constraints[1:]:
     substitutions.append(substitute(target, substitution, constraint))
   solution = solve(ConstraintSystem(substitutions))
-  if solution is None or solution == {}:
-    return solution
-  if '' in solution:
-    del solution['']
+  if len(solution.inconsistencies) != 0:
+    return solution.merge(Solution(inconsistencies={target}))
   top_constraint = system.constraints[0]
-  for term in solution:
+  for term in solution.assignments:
     top_constraint = substitute(
-      term, LiteralExpression(solution[term]), top_constraint)
+      term, LiteralExpression(solution.assignments[term]), top_constraint)
   top_solution = solve(ConstraintSystem([top_constraint]))
-  return solution | top_solution
+  return solution.merge(top_solution)

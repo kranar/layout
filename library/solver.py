@@ -83,6 +83,11 @@ def find_coefficients(expression):
   return expression.visit(Visitor())
 
 
+def filter_coefficients(coefficients):
+  return {variable: value for (variable, value) in coefficients.items() if
+    not math.isclose(value, 0)}
+
+
 def build_from_coefficients(coefficients):
   expression = None
   for variable in coefficients:
@@ -190,17 +195,20 @@ def solve_equation(equation):
   Solves an Equation, if it consists of more than one variable then the Solution
   shall have no assignments and all variables shall be underdetermined.
   '''
-  coefficients = find_coefficients(expand(equation.expression))
-  non_trivial_variable_count = 0
-  for key in coefficients:
-    if key != '' and coefficients[key] != 0:
-      non_trivial_variable_count += 1
+  coefficients = filter_coefficients(
+    find_coefficients(expand(equation.expression)))
+  variables = collect_variables(equation.expression)
+  underdetermined = {
+    variable for variable in variables if variable not in coefficients}
+  non_trivial_variable_count = len(coefficients)
+  if '' in coefficients:
+    non_trivial_variable_count -= 1
   if non_trivial_variable_count == 0:
     if coefficients.get('', 0) == 0:
       return Solution()
     return Solution(inconsistencies={''})
   elif non_trivial_variable_count > 1:
-    return Solution(underdetermined=collect_variables(equation.expression))
+    return Solution(underdetermined=variables)
   constant = coefficients.get('', 0)
   for key in coefficients:
     if key != '':
@@ -208,8 +216,37 @@ def solve_equation(equation):
       coefficient = coefficients[key]
       break
   if coefficient == 0:
-    return Solution(underdetermined={variable})
-  return Solution({variable: -constant / coefficient})
+    return Solution(underdetermined={variable} | underdetermined)
+  return Solution(
+    {variable: -constant / coefficient}, underdetermined=underdetermined)
+
+
+def pick_isolate(coefficients):
+  for key in coefficients:
+    if key != '':
+      return key
+  return None
+
+
+def make_substituted_system(variable, coefficients, system):
+  coefficient = coefficients[variable]
+  del coefficients[variable]
+  if coefficient == 1:
+    substitution = -1 * build_from_coefficients(coefficients)
+  else:
+    substitution = -1 * (build_from_coefficients(coefficients) / coefficient)
+  substitutions = []
+  is_consistent = True
+  for constraint in system.constraints[1:]:
+    substituted_constraint = substitute(variable, substitution, constraint)
+    if is_consistent and substituted_constraint != constraint:
+      variables = collect_variables(substituted_constraint)
+      if len(variables) == 0:
+        solution = solve_equation(substituted_constraint)
+        if solution.is_inconsistent:
+          is_consistent = False
+    substitutions.append(substituted_constraint)
+  return ConstraintSystem(substitutions), is_consistent
 
 
 def solve(system):
@@ -219,42 +256,24 @@ def solve(system):
   '''
   if len(system.constraints) == 1:
     return solve_equation(system.constraints[0])
-  coefficients = find_coefficients(expand(system.constraints[0].expression))
-  target = None
-  for key in coefficients:
-    if key != '' and coefficients[key] != 0:
-      target = key
-      break
-  if target is None:
+  coefficients = filter_coefficients(
+    find_coefficients(expand(system.constraints[0].expression)))
+  isolate = pick_isolate(coefficients)
+  if isolate is None:
     solution = solve(ConstraintSystem(system.constraints[1:]))
     if coefficients.get('', 0) == 0:
       return solution
     else:
       return solution.merge(Solution(inconsistencies={''}))
-  coefficient = coefficients[target]
-  del coefficients[target]
-  if coefficient == 1:
-    substitution = -1 * build_from_coefficients(coefficients)
-  else:
-    substitution = -1 * (build_from_coefficients(coefficients) / coefficient)
-  substitutions = []
-  for constraint in system.constraints[1:]:
-    substitutions.append(substitute(target, substitution, constraint))
-  solution = solve(ConstraintSystem(substitutions))
+  substituted_system, is_substitution_consistent = make_substituted_system(
+    isolate, coefficients, system)
+  solution = solve(substituted_system)
+  if not is_substitution_consistent:
+    solution = solution.merge(Solution(inconsistencies={isolate}))
   if solution.is_inconsistent:
-    variables = collect_variables(system.constraints[0].expression)
-    is_shared_inconsistency = False
-    for variable in solution.inconsistencies:
-      if variable in variables:
-        is_shared_inconsistency = True
-        break
-    inconsistencies = set()
-    if is_shared_inconsistency:
-      inconsistencies = variables
-    elif len(solution.inconsistencies) != 0:
-      inconsistencies = {target}
-    if len(inconsistencies) != 0:
-      return solution.merge(Solution(inconsistencies=inconsistencies))
+    variables = (coefficients.keys() - {''}) | {isolate}
+    if not solution.inconsistencies.isdisjoint(variables):
+      return solution.merge(Solution(inconsistencies=variables))
   top_constraint = system.constraints[0]
   for term in solution.assignments:
     top_constraint = substitute(

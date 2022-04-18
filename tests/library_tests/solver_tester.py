@@ -15,7 +15,8 @@ class SolverTester(unittest.TestCase):
   def assertSolutionEqual(self, actual, expected):
     self.assertEqual(len(actual.assignments), len(expected.assignments))
     for key in actual.assignments:
-      self.assertAlmostEqual(actual.assignments[key], expected.assignments[key])
+      self.assertAlmostEqual(actual.assignments[key], expected.assignments[key],
+        msg=key)
     self.assertEqual(actual.inconsistencies, expected.inconsistencies)
     self.assertEqual(actual.underdetermined, expected.underdetermined)
 
@@ -190,6 +191,7 @@ class SolverTester(unittest.TestCase):
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
        c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
+
 
 if __name__ == '__main__':
   unittest.main()

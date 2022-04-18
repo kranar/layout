@@ -2,7 +2,7 @@ from library.statement import *
 
 
 class ConstraintSystem(Statement):
-  '''Composes multiple constraints together into a system.'''
+  '''Composes multiple Equations together into a system.'''
 
   def __init__(self, constraints):
     '''Constructs a ConstraintSystem from a list of constraints.'''

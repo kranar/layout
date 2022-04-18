@@ -55,30 +55,57 @@ def substitute(variable, substitution, expression):
       self._substitution = substitution
 
     def visit_equation(self, equation):
-      return Equation(
-        substitute(variable, self._substitution, equation.expression))
+      expression_substitution = substitute(
+        variable, self._substitution, equation.expression)
+      if substitution == equation.expression:
+        return equation
+      return Equation(expression_substitution)
 
     def visit_expression(self, expression):
       return expression
 
     def visit_addition(self, expression):
-      return substitute(variable, self._substitution, expression.left) + \
-        substitute(variable, self._substitution, expression.right)
+      left_substitution = substitute(
+        variable, self._substitution, expression.left)
+      right_substitution = substitute(
+        variable, self._substitution, expression.right)
+      if left_substitution == expression.left and \
+          right_substitution == expression.right:
+        return expression
+      return left_substitution + right_substitution
 
     def visit_subtraction(self, expression):
-      return substitute(variable, self._substitution, expression.left) - \
-        substitute(variable, self._substitution, expression.right)
+      left_substitution = substitute(
+        variable, self._substitution, expression.left)
+      right_substitution = substitute(
+        variable, self._substitution, expression.right)
+      if left_substitution == expression.left and \
+          right_substitution == expression.right:
+        return expression
+      return left_substitution - right_substitution
 
     def visit_multiplication(self, expression):
-      return substitute(variable, self._substitution, expression.left) * \
-        substitute(variable, self._substitution, expression.right)
+      left_substitution = substitute(
+        variable, self._substitution, expression.left)
+      right_substitution = substitute(
+        variable, self._substitution, expression.right)
+      if left_substitution == expression.left and \
+          right_substitution == expression.right:
+        return expression
+      return left_substitution * right_substitution
 
     def visit_division(self, expression):
-      return substitute(variable, self._substitution, expression.left) / \
-        substitute(variable, self._substitution, expression.right)
+      left_substitution = substitute(
+        variable, self._substitution, expression.left)
+      right_substitution = substitute(
+        variable, self._substitution, expression.right)
+      if left_substitution == expression.left and \
+          right_substitution == expression.right:
+        return expression
+      return left_substitution / right_substitution
 
     def visit_variable(self, expression):
       if expression.name == self._variable:
         return self._substitution
-      return self.visit_expression(expression)
+      return expression
   return expression.visit(Visitor(variable, substitution))

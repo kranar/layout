@@ -6,10 +6,11 @@ from library.division_expression import *
 from library.equation import *
 from library.literal_expression import *
 from library.multiplication_expression import *
-from library.statement_visitor import *
 from library.subtraction_expression import *
 from library.variable_expression import *
-from library.parser import *
+from library.statement_visitor import *
+from library.statement_walker import *
 from library.manipulations import *
 from library.solver import *
 from library.layout import *
+from library.parser import *

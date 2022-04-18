@@ -3,8 +3,8 @@ from library.statement import *
 
 class Expression(Statement):
   '''
-  Base class representing an expression. An expression is a Statement that when
-  given an environment can be evaluated to form a value.
+  Base class representing an expression. An expression is a Statement that can
+  be evaluated.
   '''
 
   def __init__(self):

@@ -93,6 +93,15 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertSolutionEqual(solution, Solution(inconsistencies={'x'}))
 
+  def test_single_variable_contradiction(self):
+    equations = []
+    equations.append(Equation(x + 1))
+    equations.append(Equation(LiteralExpression(5)))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertSolutionEqual(
+      solution, Solution({'x': -1}, inconsistencies={''}))
+
   def test_semiconsistent_solution(self):
     equations = []
     equations.append(Equation(x + 1))
@@ -113,6 +122,21 @@ class SolverTester(unittest.TestCase):
     self.assertSolutionEqual(solution, Solution(inconsistencies={'x', 'y'}))
 
   def test_underdetermined_solution(self):
+    equations = []
+    equations.append(Equation(x + y))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertSolutionEqual(solution, Solution(underdetermined={'x', 'y'}))
+
+  def test_underdetermined_solution_with_cancelling(self):
+    equations = []
+    equations.append(Equation(x + y - y + 5))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertSolutionEqual(
+      solution, Solution({'x': -5}, underdetermined={'y'}))
+
+  def test_underdetermined_solution_multiple_equations(self):
     equations = []
     equations.append(Equation(x + y))
     equations.append(Equation(2 * x + 2 * y))
@@ -166,7 +190,6 @@ class SolverTester(unittest.TestCase):
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
        c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
-
 
 if __name__ == '__main__':
   unittest.main()

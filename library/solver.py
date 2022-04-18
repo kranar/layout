@@ -3,6 +3,7 @@ import math
 from library import ConstraintSystem
 from library import LiteralExpression
 from library import StatementVisitor
+from library import StatementWalker
 from library import VariableExpression
 from library.manipulations import *
 
@@ -112,6 +113,10 @@ class Solution:
     self._inconsistencies = inconsistencies.copy()
 
   @property
+  def is_solved(self):
+    return not self.is_underdetermined() and not self.is_inconsistent()
+
+  @property
   def assignments(self):
     return self._assignments
 
@@ -120,8 +125,16 @@ class Solution:
     return self._underdetermined
 
   @property
+  def is_underdetermined(self):
+    return len(self._underdetermined) != 0
+
+  @property
   def inconsistencies(self):
     return self._inconsistencies
+
+  @property
+  def is_inconsistent(self):
+    return len(self._inconsistencies) != 0
 
   def merge(self, solution):
     inconsistencies = self._inconsistencies | solution.inconsistencies
@@ -160,29 +173,53 @@ class Solution:
       self._underdetermined == other._underdetermined
 
 
+def collect_variables(statement):
+  class Collector(StatementWalker):
+    def __init__(self):
+      self._variables = set()
+
+    def visit_variable(self, expression):
+      self._variables.add(expression.name)
+  collector = Collector()
+  statement.visit(collector)
+  return collector._variables
+
+
+def solve_equation(equation):
+  '''
+  Solves an Equation, if it consists of more than one variable then the Solution
+  shall have no assignments and all variables shall be underdetermined.
+  '''
+  coefficients = find_coefficients(expand(equation.expression))
+  non_trivial_variable_count = 0
+  for key in coefficients:
+    if key != '' and coefficients[key] != 0:
+      non_trivial_variable_count += 1
+  if non_trivial_variable_count == 0:
+    if coefficients.get('', 0) == 0:
+      return Solution()
+    return Solution(inconsistencies={''})
+  elif non_trivial_variable_count > 1:
+    return Solution(underdetermined=collect_variables(equation.expression))
+  constant = coefficients.get('', 0)
+  for key in coefficients:
+    if key != '':
+      variable = key
+      coefficient = coefficients[key]
+      break
+  if coefficient == 0:
+    return Solution(underdetermined={variable})
+  return Solution({variable: -constant / coefficient})
+
+
 def solve(system):
   '''
-  Takes a ConstraintSystem and returns a dict whose keys are variable names and
-  values are the solution to the given system. If no solution exists None is
-  returned, if the solution is infinite then an empty dict is returned.
+  Takes a ConstraintSystem and returns a Solution that satisfies all of the
+  system's equations.
   '''
-  coefficients = find_coefficients(expand(system.constraints[0].expression))
   if len(system.constraints) == 1:
-    constant = 0
-    variable = None
-    for key in coefficients:
-      if key == '':
-        constant = coefficients[key]
-      else:
-        variable = key
-        coefficient = coefficients[key]
-    if variable is None:
-      if constant == 0:
-        return Solution()
-      return Solution(inconsistencies={''})
-    if coefficient == 0:
-      return Solution(underdetermined={variable})
-    return Solution({variable: -constant / coefficient})
+    return solve_equation(system.constraints[0])
+  coefficients = find_coefficients(expand(system.constraints[0].expression))
   target = None
   for key in coefficients:
     if key != '' and coefficients[key] != 0:
@@ -204,8 +241,20 @@ def solve(system):
   for constraint in system.constraints[1:]:
     substitutions.append(substitute(target, substitution, constraint))
   solution = solve(ConstraintSystem(substitutions))
-  if len(solution.inconsistencies) != 0:
-    return solution.merge(Solution(inconsistencies={target}))
+  if solution.is_inconsistent:
+    variables = collect_variables(system.constraints[0].expression)
+    is_shared_inconsistency = False
+    for variable in solution.inconsistencies:
+      if variable in variables:
+        is_shared_inconsistency = True
+        break
+    inconsistencies = set()
+    if is_shared_inconsistency:
+      inconsistencies = variables
+    elif len(solution.inconsistencies) != 0:
+      inconsistencies = {target}
+    if len(inconsistencies) != 0:
+      return solution.merge(Solution(inconsistencies=inconsistencies))
   top_constraint = system.constraints[0]
   for term in solution.assignments:
     top_constraint = substitute(

@@ -126,7 +126,7 @@ class Layout:
     solution = solve(ConstraintSystem(constraints))
     if 'width' in solution.inconsistencies:
       del constraints[-4]
-    if 'width' in solution.inconsistencies:
+    if 'height' in solution.inconsistencies:
       del constraints[-2]
     solution = solve(ConstraintSystem(constraints))
     for case in solution.assignments:

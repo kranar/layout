@@ -61,6 +61,8 @@ class LayoutTester(unittest.TestCase):
     layout.resize(500, 200)
     self.assertEqual(layout.width, 500)
     self.assertEqual(layout.height, 100)
+    a.width = 200
+    b.width = 300
     self.assertEqual(layout.items, [a, b])
 
 

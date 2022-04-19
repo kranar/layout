@@ -10,7 +10,17 @@ class ConstraintSystem(Statement):
 
   @property
   def constraints(self):
+    '''Returns the list of constraints.'''
     return self._constraints.copy()
+
+  def merge(self, system):
+    '''
+    Returns a new ConstraintSystem whose constraints are those of another
+    system appended to the constraints of this system.
+    '''
+    constraints = self._constraints.copy()
+    constraints.extend(system._constraints)
+    return ConstraintSystem(constraints)
 
   def visit(self, visitor):
     return visitor.visit_constraint_system(self)

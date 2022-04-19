@@ -24,6 +24,14 @@ class LayoutItem:
     self.height = height
     self.height_policy = height_policy
 
+  @property
+  def bottom(self):
+    return self.top + self.height - 1
+
+  @property
+  def right(self):
+    return self.left + self.width - 1
+
   def __eq__(self, other):
     return isinstance(other, LayoutItem) and \
       self.name == other.name and self.top == other.top and \
@@ -60,6 +68,34 @@ class LayoutExpression:
     return self._left
 
 
+def build_row_system(items, width, top):
+  row_items = []
+  for item in items:
+    if item.top <= top and item.bottom > top:
+      row_items.append(item)
+    row_items.sort(key=lambda key: key.left)
+  equations = []
+  for item in row_items:
+    item_expression = LayoutExpression(item.name)
+    if item.left == 0:
+      equations.append(Equation(item_expression.left)) 
+    if last_item is not None:
+      equations.append(
+        Equation(item_expression.left - (last_item.left + last_item.width)))
+    if item.width_policy == LayoutPolicy.FIXED:
+      equations.append(Equation(item_expression.width - item.width))
+    if width_sum is None:
+      width_sum = item_expression.width
+    else:
+      width_sum += item_expression.width
+    last_item = item_expression
+  width_expression = VariableExpression('width')
+  equations.append(Equation(width_expression - width))
+  width_sum -= width_expression
+  equations.append(Equation(width_sum))
+  return ConstraintSystem(equations)
+
+
 class Layout:
   def __init__(self, items, constraints):
     self._items = copy.deepcopy(items)
@@ -92,43 +128,24 @@ class Layout:
 
   def resize(self, width, height):
     constraints = []
-    last_item = None
-    width_sum = None
-    height_sum = None
-    for item in self._items:
-      item_expression = LayoutExpression(item.name)
-      if item.left == 0:
-        constraints.append(Equation(item_expression.left)) 
-      if last_item is not None:
-        constraints.append(
-          Equation(item_expression.left - (last_item.left + last_item.width)))
-      if item.top == 0:
-        constraints.append(Equation(item_expression.top))
-      if item.width_policy == LayoutPolicy.FIXED:
-        constraints.append(Equation(item_expression.width - item.width))
-      if item.height_policy == LayoutPolicy.FIXED:
-        constraints.append(Equation(item_expression.height - item.height))
-      if width_sum is None:
-        width_sum = item_expression.width
-      else:
-        width_sum += item_expression.width
-      if height_sum is None:
-        height_sum = item_expression.height
-      last_item = item_expression
-    width_expression = VariableExpression('width')
-    constraints.append(Equation(width_expression - width))
-    width_sum -= width_expression
-    constraints.append(Equation(width_sum))
-    height_expression = VariableExpression('height')
-    constraints.append(Equation(height_expression - height))
-    height_sum -= height_expression
-    constraints.append(Equation(height_sum))
-    solution = solve(ConstraintSystem(constraints))
+    rows_system = build_row_system(self._items, self._width, 0)
+    columns_system = ConstraintSystem([VariableExpression('height') - height])
+    solution = solve(rows_system.merge(columns_system))
+    update_solution = False
     if 'width' in solution.inconsistencies:
+      update_solution = True
       del constraints[-4]
     if 'height' in solution.inconsistencies:
+      update_solution = True
       del constraints[-2]
-    solution = solve(ConstraintSystem(constraints))
+    if solution.is_underdetermined:
+      underdetermined = solution.underdetermined
+      base = VariableExpression(underdetermined.pop())
+      update_solution = True
+      for variable in underdetermined:
+        constraints.append(Equation(base - VariableExpression(variable)))
+    if update_solution:
+      solution = solve(ConstraintSystem(constraints))
     for case in solution.assignments:
       name_index = case.find('.')
       if name_index == -1:

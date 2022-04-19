@@ -70,10 +70,12 @@ class LayoutExpression:
 
 def build_row_system(items, width, top):
   row_items = []
+  bottom = top
   for item in items:
     if item.top <= top and item.bottom > top:
       row_items.append(item)
-    row_items.sort(key=lambda key: key.left)
+      bottom = max(bottom, item.bottom)
+  row_items.sort(key=lambda key: key.left)
   equations = []
   for item in row_items:
     item_expression = LayoutExpression(item.name)
@@ -84,16 +86,16 @@ def build_row_system(items, width, top):
         Equation(item_expression.left - (last_item.left + last_item.width)))
     if item.width_policy == LayoutPolicy.FIXED:
       equations.append(Equation(item_expression.width - item.width))
+    elif item.width_policy == LayoutPolicy.EXPANDING:
+      pass
     if width_sum is None:
       width_sum = item_expression.width
     else:
       width_sum += item_expression.width
     last_item = item_expression
-  width_expression = VariableExpression('width')
-  equations.append(Equation(width_expression - width))
-  width_sum -= width_expression
+  width_sum -= VariableExpression('width')
   equations.append(Equation(width_sum))
-  return ConstraintSystem(equations)
+  return ConstraintSystem(equations), bottom
 
 
 class Layout:
@@ -127,10 +129,10 @@ class Layout:
     return self._height
 
   def resize(self, width, height):
-    constraints = []
-    rows_system = build_row_system(self._items, self._width, 0)
+    rows_system, bottom = build_row_system(self._items, self._width, 0)
     columns_system = ConstraintSystem([VariableExpression('height') - height])
     solution = solve(rows_system.merge(columns_system))
+    '''
     update_solution = False
     if 'width' in solution.inconsistencies:
       update_solution = True
@@ -146,6 +148,7 @@ class Layout:
         constraints.append(Equation(base - VariableExpression(variable)))
     if update_solution:
       solution = solve(ConstraintSystem(constraints))
+    '''
     for case in solution.assignments:
       name_index = case.find('.')
       if name_index == -1:

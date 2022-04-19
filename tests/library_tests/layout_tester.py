@@ -5,8 +5,6 @@ from library import *
 
 
 class LayoutTester(unittest.TestCase):
-  pass
-'''
   def test_single_fixed_solution(self):
     a = LayoutItem('A', 0, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
     layout = Layout([a], [])
@@ -18,7 +16,6 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.width, 100)
     self.assertEqual(layout.height, 100)
     self.assertEqual(layout.items, [a])
-
 
   def test_single_horizontal_expanding_solution(self):
     a = LayoutItem(
@@ -33,7 +30,7 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.height, 100)
     a.width = 200
     self.assertEqual(layout.items, [a])
-'''
+
 
 if __name__ == '__main__':
   unittest.main()

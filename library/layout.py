@@ -123,25 +123,28 @@ class Layout:
     constraints.append(Equation(height_expression - height))
     height_sum -= height_expression
     constraints.append(Equation(height_sum))
-    print(ConstraintSystem(constraints))
     solution = solve(ConstraintSystem(constraints))
-    for case in solution:
+    if 'width' in solution.inconsistencies:
+      del constraints[-4]
+    if 'width' in solution.inconsistencies:
+      del constraints[-2]
+    solution = solve(ConstraintSystem(constraints))
+    for case in solution.assignments:
       name_index = case.find('.')
       if name_index == -1:
         continue
       item = self._name_to_item[case[0:name_index]]
       property = case[name_index + 1:]
       if property == 'top':
-        item.top = solution[case]
+        item.top = solution.assignments[case]
       elif property == 'left':
-        item.left = solution[case]
+        item.left = solution.assignments[case]
       elif property == 'width':
-        item.width = solution[case]
+        item.width = solution.assignments[case]
       elif property == 'height':
-        item.height = solution[case]
-    print(solution)
-    self._width = solution['width']
-    self._height = solution['height']
+        item.height = solution.assignments[case]
+    self._width = solution.assignments['width']
+    self._height = solution.assignments['height']
 
 
 def check_is_fit(components, width, height):

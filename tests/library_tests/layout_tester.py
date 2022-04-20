@@ -11,7 +11,7 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.constraints, [])
     self.assertEqual(layout.width, 100)
     self.assertEqual(layout.height, 100)
-    layout.resize(200, 200)
+    layout.resize(200, 100)
     self.assertEqual(layout.width, 100)
     self.assertEqual(layout.height, 100)
     self.assertEqual(layout.items, [a])
@@ -39,7 +39,7 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.constraints, [])
     self.assertEqual(layout.width, 300)
     self.assertEqual(layout.height, 100)
-    layout.resize(200, 200)
+    layout.resize(200, 100)
     self.assertEqual(layout.width, 300)
     self.assertEqual(layout.height, 100)
     self.assertEqual(layout.items, [a, b])
@@ -58,10 +58,11 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.constraints, [])
     self.assertEqual(layout.width, 300)
     self.assertEqual(layout.height, 100)
-    layout.resize(500, 200)
+    layout.resize(500, 100)
     self.assertEqual(layout.width, 500)
     self.assertEqual(layout.height, 100)
     a.width = 200
+    b.left = 200
     b.width = 300
     self.assertEqual(layout.items, [a, b])
 

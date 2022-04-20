@@ -122,6 +122,17 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertSolutionEqual(solution, Solution(inconsistencies={'x', 'y'}))
 
+  def test_inconsistent_propagation(self):
+    equations = []
+    equations.append(Equation(x - 1))
+    equations.append(Equation(y - 2))
+    equations.append(Equation(z - 3))
+    equations.append(Equation(x - y))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertSolutionEqual(
+      solution, Solution({'z': 3}, inconsistencies={'x', 'y'}))
+
   def test_underdetermined_solution(self):
     equations = []
     equations.append(Equation(x + y))
@@ -191,7 +202,6 @@ class SolverTester(unittest.TestCase):
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
        c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
-
 
 if __name__ == '__main__':
   unittest.main()

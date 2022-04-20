@@ -271,9 +271,15 @@ def solve(system):
   if not is_substitution_consistent:
     solution = solution.merge(Solution(inconsistencies={isolate}))
   if solution.is_inconsistent:
-    variables = (coefficients.keys() - {''}) | {isolate}
-    if not solution.inconsistencies.isdisjoint(variables):
-      return solution.merge(Solution(inconsistencies=variables))
+    inconsistencies = set()
+    for constraint in system.constraints:
+      coefficients = filter_coefficients(
+        find_coefficients(expand(constraint.expression)))
+      variables = (coefficients.keys() - {''})
+      if not solution.inconsistencies.isdisjoint(variables):
+        inconsistencies |= variables
+    if len(inconsistencies) != 0:
+      return solution.merge(Solution(inconsistencies=inconsistencies))
   top_constraint = system.constraints[0]
   for term in solution.assignments:
     top_constraint = substitute(

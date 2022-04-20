@@ -22,6 +22,16 @@ class ConstraintSystem(Statement):
     constraints.extend(system._constraints)
     return ConstraintSystem(constraints)
 
+  def remove(self, system):
+    '''
+    Returns a new ConstraintSystem whose constraints are those of this system
+    with those of another system removed from it.
+    '''
+    constraints = self._constraints.copy()
+    for constraint in system.constraints:
+      constraints.remove(constraint)
+    return ConstraintSystem(constraints)
+
   def visit(self, visitor):
     return visitor.visit_constraint_system(self)
 

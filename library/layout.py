@@ -47,7 +47,9 @@ class LayoutItem:
 class LayoutExpression:
   def __init__(self, name):
     self._width = VariableExpression(f'{name}.width')
+    self._width_growth = VariableExpression(f'{name}.width_growth')
     self._height = VariableExpression(f'{name}.height')
+    self._height_growth = VariableExpression(f'{name}.height_growth')
     self._top = VariableExpression(f'{name}.top')
     self._left = VariableExpression(f'{name}.left')
 
@@ -56,8 +58,16 @@ class LayoutExpression:
     return self._width
 
   @property
+  def width_growth(self):
+    return self._width_growth
+
+  @property
   def height(self):
     return self._height
+
+  @property
+  def height_growth(self):
+    return self._height_growth
 
   @property
   def top(self):
@@ -76,7 +86,11 @@ def build_row_system(items, width, top):
       row_items.append(item)
       bottom = max(bottom, item.bottom)
   row_items.sort(key=lambda key: key.left)
+  width_expression = VariableExpression('width')
   equations = []
+  growth_sum = LiteralExpression(-1)
+  last_item = None
+  width_sum = None
   for item in row_items:
     item_expression = LayoutExpression(item.name)
     if item.left == 0:
@@ -87,15 +101,34 @@ def build_row_system(items, width, top):
     if item.width_policy == LayoutPolicy.FIXED:
       equations.append(Equation(item_expression.width - item.width))
     elif item.width_policy == LayoutPolicy.EXPANDING:
-      pass
+      equations.append(Equation(item_expression.width -
+        item.width - item_expression.width_growth * (width_expression - width)))
+      growth_sum += item_expression.width_growth
     if width_sum is None:
       width_sum = item_expression.width
     else:
       width_sum += item_expression.width
     last_item = item_expression
-  width_sum -= VariableExpression('width')
+  width_sum -= width_expression
   equations.append(Equation(width_sum))
+  if growth_sum != LiteralExpression(-1):
+    equations.append(Equation(growth_sum))
   return ConstraintSystem(equations), bottom
+
+
+def make_determined_growths(solution, direction):
+  if not solution.is_underdetermined:
+    return None
+  underdetermined = solution.underdetermined
+  while len(underdetermined) != 0:
+    base = VariableExpression(underdetermined.pop())
+    if base.name.endswith(f'{direction}_growth'):
+      break
+  constraints = []
+  for variable in underdetermined:
+    if variable.endswith(f'{direction}_growth'):
+      constraints.append(Equation(base - VariableExpression(variable)))
+  return ConstraintSystem(constraints)
 
 
 class Layout:
@@ -130,25 +163,26 @@ class Layout:
 
   def resize(self, width, height):
     rows_system, bottom = build_row_system(self._items, self._width, 0)
-    columns_system = ConstraintSystem([VariableExpression('height') - height])
-    solution = solve(rows_system.merge(columns_system))
-    '''
+    width_system = ConstraintSystem(
+      [Equation(VariableExpression('width') - width)])
+    height_system = ConstraintSystem(
+      [Equation(VariableExpression('height') - height)])
+    system = width_system.merge(height_system).merge(rows_system)
+    solution = solve(system)
     update_solution = False
     if 'width' in solution.inconsistencies:
+      system = system.remove(width_system)
       update_solution = True
-      del constraints[-4]
     if 'height' in solution.inconsistencies:
+      system = system.remove(height_system)
       update_solution = True
-      del constraints[-2]
-    if solution.is_underdetermined:
-      underdetermined = solution.underdetermined
-      base = VariableExpression(underdetermined.pop())
-      update_solution = True
-      for variable in underdetermined:
-        constraints.append(Equation(base - VariableExpression(variable)))
+    for direction in ['width', 'height']:
+      growths = make_determined_growths(solution, direction)
+      if growths is not None:
+        system = system.merge(growths)
+        update_solution = True
     if update_solution:
-      solution = solve(ConstraintSystem(constraints))
-    '''
+      solution = solve(system)
     for case in solution.assignments:
       name_index = case.find('.')
       if name_index == -1:

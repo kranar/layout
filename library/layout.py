@@ -113,7 +113,45 @@ def build_row_system(items, width, top):
   equations.append(Equation(width_sum))
   if growth_sum != LiteralExpression(-1):
     equations.append(Equation(growth_sum))
-  return ConstraintSystem(equations), bottom
+  return ConstraintSystem(equations), bottom + 1
+
+
+def build_column_system(items, height, left):
+  column_items = []
+  right = left
+  for item in items:
+    if item.left <= left and item.right > left:
+      column_items.append(item)
+      right = max(right, item.right)
+  column_items.sort(key=lambda key: key.top)
+  height_expression = VariableExpression('height')
+  equations = []
+  growth_sum = LiteralExpression(-1)
+  last_item = None
+  height_sum = None
+  for item in column_items:
+    item_expression = LayoutExpression(item.name)
+    if item.top == 0:
+      equations.append(Equation(item_expression.top)) 
+    if last_item is not None:
+      equations.append(
+        Equation(item_expression.top - (last_item.top + last_item.height)))
+    if item.height_policy == LayoutPolicy.FIXED:
+      equations.append(Equation(item_expression.height - item.height))
+    elif item.height_policy == LayoutPolicy.EXPANDING:
+      equations.append(Equation(item_expression.height - item.height -
+        item_expression.height_growth * (height_expression - height)))
+      growth_sum += item_expression.height_growth
+    if height_sum is None:
+      height_sum = item_expression.height
+    else:
+      height_sum += item_expression.height
+    last_item = item_expression
+  height_sum -= height_expression
+  equations.append(Equation(height_sum))
+  if growth_sum != LiteralExpression(-1):
+    equations.append(Equation(growth_sum))
+  return ConstraintSystem(equations), right + 1
 
 
 def make_determined_growths(solution, direction):
@@ -162,12 +200,22 @@ class Layout:
     return self._height
 
   def resize(self, width, height):
-    rows_system, bottom = build_row_system(self._items, self._width, 0)
+    top = 0
+    rows_system = ConstraintSystem([])
+    while top != self._height:
+      system, top = build_row_system(self._items, self._width, top)
+      rows_system = rows_system.merge(system)
+    left = 0
+    columns_system = ConstraintSystem([])
+    while left != self._width:
+      system, left = build_column_system(self._items, self._height, left)
+      columns_system = columns_system.merge(system)
     width_system = ConstraintSystem(
       [Equation(VariableExpression('width') - width)])
     height_system = ConstraintSystem(
       [Equation(VariableExpression('height') - height)])
-    system = width_system.merge(height_system).merge(rows_system)
+    system = width_system.merge(height_system).merge(rows_system).merge(
+      columns_system)
     solution = solve(system)
     update_solution = False
     if 'width' in solution.inconsistencies:

@@ -66,6 +66,36 @@ class LayoutTester(unittest.TestCase):
     b.width = 300
     self.assertEqual(layout.items, [a, b])
 
+  def test_two_fixed_rows(self):
+    a = LayoutItem('A', 0, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
+    b = LayoutItem(
+      'B', 100, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
+    layout = Layout([a, b], [])
+    self.assertEqual(layout.items, [a, b])
+    self.assertEqual(layout.constraints, [])
+    self.assertEqual(layout.width, 100)
+    self.assertEqual(layout.height, 200)
+    layout.resize(200, 100)
+    self.assertEqual(layout.width, 100)
+    self.assertEqual(layout.height, 200)
+    self.assertEqual(layout.items, [a, b])
+
+  def test_two_expanding_rows(self):
+    a = LayoutItem(
+      'A', 0, 0, 100, LayoutPolicy.EXPANDING, 100, LayoutPolicy.FIXED)
+    b = LayoutItem(
+      'B', 100, 0, 100, LayoutPolicy.EXPANDING, 100, LayoutPolicy.FIXED)
+    layout = Layout([a, b], [])
+    self.assertEqual(layout.items, [a, b])
+    self.assertEqual(layout.constraints, [])
+    self.assertEqual(layout.width, 100)
+    self.assertEqual(layout.height, 200)
+    layout.resize(200, 100)
+    self.assertEqual(layout.width, 200)
+    self.assertEqual(layout.height, 200)
+    a.width = 200
+    b.width = 200
+    self.assertEqual(layout.items, [a, b])
 
 if __name__ == '__main__':
   unittest.main()

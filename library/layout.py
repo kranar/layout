@@ -1,7 +1,8 @@
 import copy
 import enum
-from library.constraint_system import ConstraintSystem
+import math
 
+from library.constraint_system import ConstraintSystem
 from library.equation import *
 from library.solver import *
 from library.variable_expression import *
@@ -80,11 +81,11 @@ class LayoutExpression:
 
 def build_row_system(items, width, top):
   row_items = []
-  bottom = top
+  bottom = math.inf
   for item in items:
     if item.top <= top and item.bottom > top:
       row_items.append(item)
-      bottom = max(bottom, item.bottom)
+      bottom = min(bottom, item.bottom)
   row_items.sort(key=lambda key: key.left)
   width_expression = VariableExpression('width')
   equations = []
@@ -118,11 +119,11 @@ def build_row_system(items, width, top):
 
 def build_column_system(items, height, left):
   column_items = []
-  right = left
+  right = math.inf
   for item in items:
     if item.left <= left and item.right > left:
       column_items.append(item)
-      right = max(right, item.right)
+      right = min(right, item.right)
   column_items.sort(key=lambda key: key.top)
   height_expression = VariableExpression('height')
   equations = []

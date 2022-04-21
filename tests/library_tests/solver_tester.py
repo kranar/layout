@@ -20,6 +20,7 @@ class SolverTester(unittest.TestCase):
     self.assertEqual(actual.inconsistencies, expected.inconsistencies)
     self.assertEqual(actual.underdetermined, expected.underdetermined)
 
+  '''
   def test_solve_single_variable(self):
     equations = []
     equations.append(Equation(x))
@@ -202,6 +203,33 @@ class SolverTester(unittest.TestCase):
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
        c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
+
+  def test_underdetermined_layout(self):
+    a_left = VariableExpression('A.left')
+    a_width = VariableExpression('A.width')
+    a_width_growth = VariableExpression('A.width_growth')
+    b_left = VariableExpression('B.left')
+    b_width = VariableExpression('B.width')
+    width = VariableExpression('width')
+    equations = []
+    equations.append(Equation(a_left))
+    equations.append(Equation(a_width - 100 - a_width_growth * (width - 100)))
+    equations.append(Equation(a_width - width))
+    equations.append(Equation(-1 + a_width_growth))
+    equations.append(Equation(b_left))
+    equations.append(Equation(b_width - 100))
+    equations.append(Equation(b_width - width))
+    system = ConstraintSystem(equations)
+    solution = solve(system)
+    self.assertFalse(solution.is_inconsistent)
+  '''
+
+  def test_mixed_equation(self):
+    system = ConstraintSystem([Equation(x + y + y - 2 * y - 5)])
+    solution = solve(system)
+    self.assertSolutionEqual(
+      solution, Solution({x.name: 5}, underdetermined={y.name}))
+
 
 if __name__ == '__main__':
   unittest.main()

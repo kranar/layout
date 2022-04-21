@@ -88,26 +88,6 @@ def filter_coefficients(coefficients):
     not math.isclose(value, 0)}
 
 
-def build_from_coefficients(coefficients):
-  expression = None
-  for variable in coefficients:
-    if variable == '':
-      extension = LiteralExpression(coefficients[variable])
-    else:
-      coefficient = coefficients[variable]
-      if coefficient == 1:
-        extension = VariableExpression(variable)
-      else:
-        extension = coefficients[variable] * VariableExpression(variable)
-    if expression is None:
-      expression = extension
-    else:
-      expression += extension
-  if expression is None:
-    return LiteralExpression(0)
-  return expression
-
-
 class Solution:
   '''Stores the solution to a ConstraintSystem.'''
 
@@ -228,13 +208,63 @@ def pick_isolate(coefficients):
   return None
 
 
-def make_substituted_system(variable, coefficients, system):
-  coefficient = coefficients[variable]
-  del coefficients[variable]
-  if coefficient == 1:
-    substitution = -1 * build_from_coefficients(coefficients)
-  else:
-    substitution = -1 * (build_from_coefficients(coefficients) / coefficient)
+def isolate(variable, equation):
+  class Walker(StatementWalker):
+    def __init__(self):
+      self._terms = []
+      self._sign = 1
+
+    def append(self, expression):
+      if self._sign == 1:
+        self._terms.append(expression)
+      else:
+        self._terms.append(-1 * expression)
+
+    def visit_literal(self, expression):
+      self.append(expression)
+
+    def visit_division(self, expression):
+      self.append(expression)
+
+    def visit_multiplication(self, expression):
+      self.append(expression)
+
+    def visit_subtraction(self, expression):
+      expression.left.visit(self)
+      self._sign *= -1
+      expression.right.visit(self)
+      self._sign *= -1
+      return self.visit_expression(expression)
+
+    def visit_variable(self, expression):
+      self.append(expression)
+  walker = Walker()
+  equation.expression.visit(walker)
+  terms = walker._terms
+  numerator = None
+  denominator = None
+  for term in terms:
+    variables = collect_variables(term)
+    if variable not in variables:
+      if numerator is None:
+        numerator = -1 * term
+      else:
+        numerator += -1 * term
+    else:
+      if denominator is None:
+        denominator = substitute(variable, LiteralExpression(1), term)
+      else:
+        denominator += substitute(variable, LiteralExpression(1), term)
+  if numerator is None:
+    numerator = LiteralExpression(0)
+  if denominator is None:
+    denominator = LiteralExpression(1)
+  return numerator / denominator
+
+
+def make_substituted_system(variable, system):
+  substitution = isolate(
+    variable, Equation(expand(system.constraints[0].expression)))
   substitutions = []
   is_consistent = True
   for constraint in system.constraints[1:]:
@@ -266,7 +296,7 @@ def solve(system):
     else:
       return solution.merge(Solution(inconsistencies={''}))
   substituted_system, is_substitution_consistent = make_substituted_system(
-    isolate, coefficients, system)
+    isolate, system)
   solution = solve(substituted_system)
   if not is_substitution_consistent:
     solution = solution.merge(Solution(inconsistencies={isolate}))

@@ -4,88 +4,65 @@ from library import ConstraintSystem
 from library import LiteralExpression
 from library import StatementVisitor
 from library import StatementWalker
-from library import VariableExpression
+from library.division_expression import DivisionExpression
+from library.expression import Expression
 from library.manipulations import *
 
 
-def evaluate_constants(expression):
+class UnderdeterminedType:
+  def __init__(self):
+    pass
+
+  def __eq__(self, other):
+    return isinstance(other, UnderdeterminedType)
+
+UNDERDETERMINED = UnderdeterminedType()
+
+
+def evaluate(expression):
   class Visitor(StatementVisitor):
     def visit_addition(self, expression):
-      return evaluate_constants(expression.left) + \
-        evaluate_constants(expression.right)
+      left = evaluate(expression.left)
+      if left is UNDERDETERMINED:
+        return UNDERDETERMINED
+      right = evaluate(expression.right)
+      if right is UNDERDETERMINED:
+        return UNDERDETERMINED
+      return left + right
 
     def visit_subtraction(self, expression):
-      return evaluate_constants(expression.left) - \
-        evaluate_constants(expression.right)
+      left = evaluate(expression.left)
+      if left is UNDERDETERMINED:
+        return UNDERDETERMINED
+      right = evaluate(expression.right)
+      if right is UNDERDETERMINED:
+        return UNDERDETERMINED
+      return left - right
 
     def visit_multiplication(self, expression):
-      return evaluate_constants(expression.left) * \
-        evaluate_constants(expression.right)
+      left = evaluate(expression.left)
+      if left is UNDERDETERMINED:
+        return UNDERDETERMINED
+      right = evaluate(expression.right)
+      if right is UNDERDETERMINED:
+        return UNDERDETERMINED
+      return left * right
 
     def visit_division(self, expression):
-      return evaluate_constants(expression.left) / \
-        evaluate_constants(expression.right)
+      numerator = evaluate(expression.left)
+      if numerator is UNDERDETERMINED:
+        return UNDERDETERMINED
+      denominator = evaluate(expression.right)
+      if denominator == 0 or denominator is UNDERDETERMINED:
+        return UNDERDETERMINED
+      return numerator / denominator
 
     def visit_literal(self, expression):
       return expression.value
-  return expression.visit(Visitor())
-
-
-def find_coefficients(expression):
-  class Visitor(StatementVisitor):
-    def visit_expression(self, expression):
-      return {}
-
-    def visit_addition(self, expression):
-      left = find_coefficients(expression.left)
-      right = find_coefficients(expression.right)
-      return {key: left.get(key, 0) + right.get(key, 0) for
-        key in set(left) | set(right)}
-
-    def visit_subtraction(self, expression):
-      left = find_coefficients(expression.left)
-      right = find_coefficients(expression.right)
-      return {key: left.get(key, 0) - right.get(key, 0) for
-        key in set(left) | set(right)}
-
-    def visit_multiplication(self, expression):
-      left = find_coefficients(expression.left)
-      right = find_coefficients(expression.right)
-      coefficients = {key: left.get(key, 1) * right.get(key, 1) for
-        key in set(left) | set(right)}
-      constant = coefficients.get('', 1)
-      for variable in coefficients:
-        if variable != '':
-          term = coefficients[variable]
-          coefficients = {variable: term * constant}
-          break
-      return coefficients
-
-    def visit_division(self, expression):
-      left = find_coefficients(expression.left)
-      denominator = evaluate_constants(expression.right)
-      has_variable = False
-      for variable in left:
-        if variable != '':
-          term = left[variable]
-          left = {variable: term / denominator}
-          has_variable = True
-          break
-      if not has_variable:
-        left = {'': left.get('', 0) / denominator}
-      return left
 
     def visit_variable(self, expression):
-      return {expression.name: 1}
-
-    def visit_literal(self, expression):
-      return {'': expression.value}
+      return expression
   return expression.visit(Visitor())
-
-
-def filter_coefficients(coefficients):
-  return {variable: value for (variable, value) in coefficients.items() if
-    not math.isclose(value, 0)}
 
 
 class Solution:
@@ -170,44 +147,6 @@ def collect_variables(statement):
   return collector._variables
 
 
-def solve_equation(equation):
-  '''
-  Solves an Equation, if it consists of more than one variable then the Solution
-  shall have no assignments and all variables shall be underdetermined.
-  '''
-  coefficients = filter_coefficients(
-    find_coefficients(expand(equation.expression)))
-  variables = collect_variables(equation.expression)
-  underdetermined = {
-    variable for variable in variables if variable not in coefficients}
-  non_trivial_variable_count = len(coefficients)
-  if '' in coefficients:
-    non_trivial_variable_count -= 1
-  if non_trivial_variable_count == 0:
-    if coefficients.get('', 0) == 0:
-      return Solution()
-    return Solution(inconsistencies={''})
-  elif non_trivial_variable_count > 1:
-    return Solution(underdetermined=variables)
-  constant = coefficients.get('', 0)
-  for key in coefficients:
-    if key != '':
-      variable = key
-      coefficient = coefficients[key]
-      break
-  if coefficient == 0:
-    return Solution(underdetermined={variable} | underdetermined)
-  return Solution(
-    {variable: -constant / coefficient}, underdetermined=underdetermined)
-
-
-def pick_isolate(coefficients):
-  for key in coefficients:
-    if key != '':
-      return key
-  return None
-
-
 def isolate(variable, equation):
   class Walker(StatementWalker):
     def __init__(self):
@@ -234,12 +173,11 @@ def isolate(variable, equation):
       self._sign *= -1
       expression.right.visit(self)
       self._sign *= -1
-      return self.visit_expression(expression)
 
     def visit_variable(self, expression):
       self.append(expression)
   walker = Walker()
-  equation.expression.visit(walker)
+  expand(equation.expression).visit(walker)
   terms = walker._terms
   numerator = None
   denominator = None
@@ -265,6 +203,7 @@ def isolate(variable, equation):
 def make_substituted_system(variable, system):
   substitution = isolate(
     variable, Equation(expand(system.constraints[0].expression)))
+  print(variable, ': ', substitution)
   substitutions = []
   is_consistent = True
   for constraint in system.constraints[1:]:
@@ -279,33 +218,62 @@ def make_substituted_system(variable, system):
   return ConstraintSystem(substitutions), is_consistent
 
 
+def solve_equation(equation):
+  '''
+  Solves an Equation, if it consists of more than one variable then the Solution
+  shall have no assignments and all variables shall be underdetermined.
+  '''
+  variables = collect_variables(equation.expression)
+  if len(variables) == 0:
+    if evaluate(equation.expression) == 0:
+      return Solution()
+    return Solution(inconsistencies={''})
+  underdetermined = set()
+  expressions = {}
+  while len(variables) != 0:
+    variable = variables.pop()
+    expression = isolate(variable, equation)
+    if issubclass(type(expression), DivisionExpression) and \
+        evaluate(expression.right) == 0:
+      underdetermined.add(variable)
+    else:
+      expressions[variable] = expression
+  assignments = {}
+  unresolved = set()
+  for (variable, expression) in expressions.items():
+    for u in underdetermined:
+      expression = substitute(u, LiteralExpression(0), expression)
+    evaluation = evaluate(expression)
+    if issubclass(type(evaluation), Expression):
+      unresolved.add(variable)
+    else:
+      assignments[variable] = evaluation
+  return Solution(assignments, underdetermined=underdetermined | unresolved)
+
+
 def solve(system):
   '''
   Takes a ConstraintSystem and returns a Solution that satisfies all of the
   system's equations.
   '''
+  print('----------------')
+  print(system)
   if len(system.constraints) == 1:
     return solve_equation(system.constraints[0])
-  coefficients = filter_coefficients(
-    find_coefficients(expand(system.constraints[0].expression)))
-  isolate = pick_isolate(coefficients)
-  if isolate is None:
-    solution = solve(ConstraintSystem(system.constraints[1:]))
-    if coefficients.get('', 0) == 0:
-      return solution
-    else:
-      return solution.merge(Solution(inconsistencies={''}))
+  variables = collect_variables(system.constraints[0])
+  if len(variables) == 0:
+    return solve_equation(system.constraints[0]).merge(
+      solve(ConstraintSystem(system.constraints[1:])))
+  variable = variables.pop()
   substituted_system, is_substitution_consistent = make_substituted_system(
-    isolate, system)
+    variable, system)
   solution = solve(substituted_system)
   if not is_substitution_consistent:
-    solution = solution.merge(Solution(inconsistencies={isolate}))
+    solution = solution.merge(Solution(inconsistencies={variable}))
   if solution.is_inconsistent:
     inconsistencies = set()
     for constraint in system.constraints:
-      coefficients = filter_coefficients(
-        find_coefficients(expand(constraint.expression)))
-      variables = (coefficients.keys() - {''})
+      variables = collect_variables(constraint)
       if not solution.inconsistencies.isdisjoint(variables):
         inconsistencies |= variables
     if len(inconsistencies) != 0:

@@ -203,6 +203,7 @@ class SolverTester(unittest.TestCase):
        a_top.name: 0, a_left.name: 0, a_width.name: 100, a_height.name: 200,
        b_top.name: 0, b_left.name: 100, b_width.name: 800, b_height.name: 200,
        c_top.name: 0, c_left.name: 900, c_width.name: 100, c_height.name: 200}))
+  '''
 
   def test_underdetermined_layout(self):
     a_left = VariableExpression('A.left')
@@ -222,14 +223,14 @@ class SolverTester(unittest.TestCase):
     system = ConstraintSystem(equations)
     solution = solve(system)
     self.assertFalse(solution.is_inconsistent)
-  '''
 
+  '''
   def test_mixed_equation(self):
     system = ConstraintSystem([Equation(x + y + y - 2 * y - 5)])
     solution = solve(system)
     self.assertSolutionEqual(
       solution, Solution({x.name: 5}, underdetermined={y.name}))
-
+  '''
 
 if __name__ == '__main__':
   unittest.main()

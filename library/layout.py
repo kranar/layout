@@ -79,80 +79,90 @@ class LayoutExpression:
     return self._left
 
 
-def build_row_system(items, width, top):
-  row_items = []
-  bottom = math.inf
-  for item in items:
-    if item.top <= top and item.bottom > top:
-      row_items.append(item)
-      bottom = min(bottom, item.bottom)
-  row_items.sort(key=lambda key: key.left)
-  width_expression = VariableExpression('width')
+def build_row_system(items, width, height):
+  top = 0
   equations = []
-  growth_sum = LiteralExpression(-1)
-  last_item = None
-  width_sum = None
-  for item in row_items:
-    item_expression = LayoutExpression(item.name)
-    if item.left == 0:
-      equations.append(Equation(item_expression.left)) 
-    if last_item is not None:
-      equations.append(
-        Equation(item_expression.left - (last_item.left + last_item.width)))
-    if item.width_policy == LayoutPolicy.FIXED:
-      equations.append(Equation(item_expression.width - item.width))
-    elif item.width_policy == LayoutPolicy.EXPANDING:
-      equations.append(Equation(item_expression.width -
-        item.width - item_expression.width_growth * (width_expression - width)))
-      growth_sum += item_expression.width_growth
-    if width_sum is None:
-      width_sum = item_expression.width
-    else:
-      width_sum += item_expression.width
-    last_item = item_expression
-  width_sum -= width_expression
-  equations.append(Equation(width_sum))
-  if growth_sum != LiteralExpression(-1):
-    equations.append(Equation(growth_sum))
-  return ConstraintSystem(equations), bottom + 1
+  nonlinear_equations = []
+  while top != height:
+    row_items = []
+    bottom = math.inf
+    for item in items:
+      if item.top <= top and item.bottom > top:
+        row_items.append(item)
+        bottom = min(bottom, item.bottom)
+    row_items.sort(key=lambda key: key.left)
+    width_expression = VariableExpression('width')
+    growth_sum = LiteralExpression(-1)
+    last_item = None
+    width_sum = None
+    for item in row_items:
+      item_expression = LayoutExpression(item.name)
+      if item.left == 0:
+        equations.append(Equation(item_expression.left)) 
+      if last_item is not None:
+        equations.append(
+          Equation(item_expression.left - (last_item.left + last_item.width)))
+      if item.width_policy == LayoutPolicy.FIXED:
+        equations.append(Equation(item_expression.width - item.width))
+      elif item.width_policy == LayoutPolicy.EXPANDING:
+        nonlinear_equations.append(Equation(item_expression.width -
+          item.width - item_expression.width_growth * (width_expression - width)))
+        growth_sum += item_expression.width_growth
+      if width_sum is None:
+        width_sum = item_expression.width
+      else:
+        width_sum += item_expression.width
+      last_item = item_expression
+    width_sum -= width_expression
+    equations.append(Equation(width_sum))
+    if growth_sum != LiteralExpression(-1):
+      equations.append(Equation(growth_sum))
+    top = bottom + 1
+  equations.extend(nonlinear_equations)
+  return ConstraintSystem(equations)
 
 
-def build_column_system(items, height, left):
-  column_items = []
-  right = math.inf
-  for item in items:
-    if item.left <= left and item.right > left:
-      column_items.append(item)
-      right = min(right, item.right)
-  column_items.sort(key=lambda key: key.top)
-  height_expression = VariableExpression('height')
+def build_column_system(items, width, height):
+  left = 0
   equations = []
-  growth_sum = LiteralExpression(-1)
-  last_item = None
-  height_sum = None
-  for item in column_items:
-    item_expression = LayoutExpression(item.name)
-    if item.top == 0:
-      equations.append(Equation(item_expression.top)) 
-    if last_item is not None:
-      equations.append(
-        Equation(item_expression.top - (last_item.top + last_item.height)))
-    if item.height_policy == LayoutPolicy.FIXED:
-      equations.append(Equation(item_expression.height - item.height))
-    elif item.height_policy == LayoutPolicy.EXPANDING:
-      equations.append(Equation(item_expression.height - item.height -
-        item_expression.height_growth * (height_expression - height)))
-      growth_sum += item_expression.height_growth
-    if height_sum is None:
-      height_sum = item_expression.height
-    else:
-      height_sum += item_expression.height
-    last_item = item_expression
-  height_sum -= height_expression
-  equations.append(Equation(height_sum))
-  if growth_sum != LiteralExpression(-1):
-    equations.append(Equation(growth_sum))
-  return ConstraintSystem(equations), right + 1
+  nonlinear_equations = []
+  while left != width:
+    column_items = []
+    right = math.inf
+    for item in items:
+      if item.left <= left and item.right > left:
+        column_items.append(item)
+        right = min(right, item.right)
+    column_items.sort(key=lambda key: key.top)
+    height_expression = VariableExpression('height')
+    growth_sum = LiteralExpression(-1)
+    last_item = None
+    height_sum = None
+    for item in column_items:
+      item_expression = LayoutExpression(item.name)
+      if item.top == 0:
+        equations.append(Equation(item_expression.top)) 
+      if last_item is not None:
+        equations.append(
+          Equation(item_expression.top - (last_item.top + last_item.height)))
+      if item.height_policy == LayoutPolicy.FIXED:
+        equations.append(Equation(item_expression.height - item.height))
+      elif item.height_policy == LayoutPolicy.EXPANDING:
+        nonlinear_equations.append(Equation(item_expression.height - item.height -
+          item_expression.height_growth * (height_expression - height)))
+        growth_sum += item_expression.height_growth
+      if height_sum is None:
+        height_sum = item_expression.height
+      else:
+        height_sum += item_expression.height
+      last_item = item_expression
+    height_sum -= height_expression
+    equations.append(Equation(height_sum))
+    if growth_sum != LiteralExpression(-1):
+      equations.append(Equation(growth_sum))
+    left = right + 1
+  equations.extend(nonlinear_equations)
+  return ConstraintSystem(equations)
 
 
 def make_determined_growths(solution, direction):
@@ -201,16 +211,8 @@ class Layout:
     return self._height
 
   def resize(self, width, height):
-    top = 0
-    rows_system = ConstraintSystem([])
-    while top != self._height:
-      system, top = build_row_system(self._items, self._width, top)
-      rows_system = rows_system.merge(system)
-    left = 0
-    columns_system = ConstraintSystem([])
-    while left != self._width:
-      system, left = build_column_system(self._items, self._height, left)
-      columns_system = columns_system.merge(system)
+    rows_system = build_row_system(self._items, self._width, self._height)
+    columns_system = build_column_system(self._items, self._width, self._height)
     width_system = ConstraintSystem(
       [Equation(VariableExpression('width') - width)])
     height_system = ConstraintSystem(
@@ -228,7 +230,7 @@ class Layout:
     for direction in ['width', 'height']:
       growths = make_determined_growths(solution, direction)
       if growths is not None:
-        system = system.merge(growths)
+        system = growths.merge(system)
         update_solution = True
     if update_solution:
       solution = solve(system)

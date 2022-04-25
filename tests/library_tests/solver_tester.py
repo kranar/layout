@@ -1,4 +1,3 @@
-from decimal import InvalidContext
 import unittest
 
 from library import *
@@ -21,7 +20,6 @@ class SolverTester(unittest.TestCase):
     self.assertEqual(actual.inconsistencies, expected.inconsistencies)
     self.assertEqual(actual.underdetermined, expected.underdetermined)
 
-  '''
   def test_solve_single_variable(self):
     equations = []
     equations.append(Equation(x))
@@ -214,12 +212,12 @@ class SolverTester(unittest.TestCase):
     width = VariableExpression('width')
     equations = []
     equations.append(Equation(a_left))
-    equations.append(Equation(a_width - 100 - a_width_growth * (width - 100)))
     equations.append(Equation(a_width - width))
     equations.append(Equation(-1 + a_width_growth))
     equations.append(Equation(b_left))
     equations.append(Equation(b_width - 100))
     equations.append(Equation(b_width - width))
+    equations.append(Equation(a_width - 100 - a_width_growth * (width - 100)))
     system = ConstraintSystem(equations)
     solution = solve(system)
     self.assertFalse(solution.is_inconsistent)
@@ -229,14 +227,6 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertSolutionEqual(
       solution, Solution({x.name: 5}, underdetermined={y.name}))
-  '''
-  def test_factors(self):
-    equations = []
-    equations.append(Equation(x * (y - 1)))
-    equations.append(Equation(y - 1))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
-    print(solution.assignments, solution.underdetermined, solution.inconsistencies)
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ from library import *
 
 
 class LayoutTester(unittest.TestCase):
-  '''
   def test_single_fixed_solution(self):
     a = LayoutItem('A', 0, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
     layout = Layout([a], [])
@@ -113,6 +112,7 @@ class LayoutTester(unittest.TestCase):
     self.assertEqual(layout.height, 200)
     self.assertEqual(layout.items, [a, b])
 
+  '''
   def test_row_decomposition(self):
     a = LayoutItem(
       'A', 0, 0, 100, LayoutPolicy.EXPANDING, 100, LayoutPolicy.EXPANDING)

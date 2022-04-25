@@ -179,6 +179,14 @@ def isolate(variable, equation):
   walker = Walker()
   expand(equation.expression).visit(walker)
   terms = walker._terms
+  for i in range(len(terms)):
+    term = terms[i]
+    if issubclass(type(term), DivisionExpression):
+      for j in range(len(terms)):
+        if i != j:
+          terms[j] = expand(terms[j] * term.right)
+        else:
+          terms[j] = term.left
   numerator = None
   denominator = None
   for term in terms:
@@ -203,7 +211,6 @@ def isolate(variable, equation):
 def make_substituted_system(variable, system):
   substitution = isolate(
     variable, Equation(expand(system.constraints[0].expression)))
-  print(variable, ': ', substitution)
   substitutions = []
   is_consistent = True
   for constraint in system.constraints[1:]:
@@ -256,8 +263,6 @@ def solve(system):
   Takes a ConstraintSystem and returns a Solution that satisfies all of the
   system's equations.
   '''
-  print('----------------')
-  print(system)
   if len(system.constraints) == 1:
     return solve_equation(system.constraints[0])
   variables = collect_variables(system.constraints[0])

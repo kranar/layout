@@ -1,7 +1,29 @@
 from library import AdditionExpression
+from library import DivisionExpression
 from library import Equation
 from library import StatementVisitor
 from library import SubtractionExpression
+
+
+def normalize_division(expression):
+  '''
+  Transforms an expression of the form (a * (b / c)) into ((a * b) / c) and
+  an expression of the form ((a / b) * c) into ((a * c) / b), otherwise returns
+  the expression unchanged.
+  '''
+  class Visitor(StatementVisitor):
+    def visit_expression(self, expression):
+      return expression
+
+    def visit_multiplication(self, expression):
+      if issubclass(type(expression.left), DivisionExpression):
+        return normalize_division(
+          (expression.left.left * expression.right) / expression.left.right)
+      elif issubclass(type(expression.right), DivisionExpression):
+        return normalize_division(
+          (expression.left * expression.right.left) / expression.right.right)
+      return expression
+  return expression.visit(Visitor())
 
 
 def expand(expression):
@@ -42,7 +64,7 @@ def expand(expression):
         if type(result.left) in distributive_operators:
           return expand(result)
         return result
-  return expression.visit(Visitor())
+  return normalize_division(expression.visit(Visitor()))
 
 
 def substitute(variable, substitution, expression):

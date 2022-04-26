@@ -147,6 +147,21 @@ def collect_variables(statement):
   return collector._variables
 
 
+def is_undefined(expression):
+  class Walker(StatementWalker):
+    def __init__(self):
+      self._is_undefined = False
+
+    def visit_division(self, expression):
+      if expression.right == LiteralExpression(0):
+        self._is_undefined = True
+        return
+      return StatementWalker.visit_division(expression)
+  walker = Walker()
+  expression.visit(walker)
+  return walker._is_undefined
+
+
 def isolate(variable, equation):
   class Walker(StatementWalker):
     def __init__(self):
@@ -205,11 +220,16 @@ def isolate(variable, equation):
     numerator = LiteralExpression(0)
   if denominator is None:
     denominator = LiteralExpression(1)
-  return expand(numerator / denominator)
+  result = expand(numerator / denominator)
+  if is_undefined(result):
+    return None
+  return result
 
 
 def make_substituted_system(variable, system):
   substitution = isolate(variable, system.constraints[0])
+  if substitution is None:
+    return None, False
   substitutions = []
   is_consistent = True
   for constraint in system.constraints[1:]:
@@ -264,13 +284,15 @@ def solve(system):
   '''
   if len(system.constraints) == 1:
     return solve_equation(system.constraints[0])
+  substituted_system = None
   variables = collect_variables(system.constraints[0])
-  if len(variables) == 0:
+  while substituted_system is None and len(variables) != 0:
+    variable = variables.pop()
+    substituted_system, is_substitution_consistent = make_substituted_system(
+      variable, system)
+  if substituted_system is None and len(variables) == 0:
     return solve_equation(system.constraints[0]).merge(
       solve(ConstraintSystem(system.constraints[1:])))
-  variable = variables.pop()
-  substituted_system, is_substitution_consistent = make_substituted_system(
-    variable, system)
   solution = solve(substituted_system)
   if not is_substitution_consistent:
     solution = solution.merge(Solution(inconsistencies={variable}))

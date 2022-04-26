@@ -228,6 +228,16 @@ class SolverTester(unittest.TestCase):
     solution = solve(system)
     self.assertSolutionEqual(
       solution, Solution({x.name: 5}, underdetermined={y.name}))
+
+  def test_isolate_zero_coefficient(self):
+    expression = Equation(x + y - x)
+    x_isolate = isolate('x', expression)
+    self.assertEqual(x_isolate, None)
+
+  def test_composite_isolate_zero_coefficient(self):
+    expression = Equation((x + y) - (x + 200.0))
+    x_isolate = isolate('x', expression)
+    self.assertEqual(x_isolate, None)
   '''
 
 

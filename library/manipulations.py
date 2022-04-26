@@ -45,7 +45,7 @@ def expand(expression):
         return expand(right + left)
       elif right == LiteralExpression(0):
         return left
-      if left == expression.left and right == expression.right:
+      elif left == expression.left and right == expression.right:
         return expression
       return left + right
 
@@ -57,33 +57,25 @@ def expand(expression):
     def visit_multiplication(self, expression):
       left = expand(expression.left)
       right = expand(expression.right)
-      if issubclass(type(left), LiteralExpression) and \
-          issubclass(type(right), LiteralExpression):
-        return LiteralExpression(left.value * right.value)
+      if issubclass(type(left), MultiplicationExpression):
+        return expand(left.left * (left.right * right))
+      elif issubclass(type(right), LiteralExpression):
+        if issubclass(type(left), LiteralExpression):
+          return LiteralExpression(left.value * right.value)
+        return expand(right * left)
       elif left == LiteralExpression(1):
         return right
-      elif right == LiteralExpression(1):
-        return left
-      elif left == LiteralExpression(0) or right == LiteralExpression(0):
+      elif left == LiteralExpression(0):
         return LiteralExpression(0)
-      elif left == LiteralExpression(-1) and \
-          issubclass(type(right), MultiplicationExpression):
-        if right.left == LiteralExpression(-1):
-          return expand(right.right)
-        elif right.right == LiteralExpression(-1):
-          return expand(right.left)
-      elif right == LiteralExpression(-1) and \
-          issubclass(type(left), MultiplicationExpression):
-        if left.left == LiteralExpression(-1):
-          return expand(left.right)
-        elif left.right == LiteralExpression(-1):
-          return expand(left.left)
-      distributive_operators = [AdditionExpression, SubtractionExpression]
-      operation = type(right)
-      if operation in distributive_operators:
-        return expand(operation(left * right.left, left * right.right))
-      elif type(left) in distributive_operators:
-        return expand(right * left)
+      elif issubclass(type(left), LiteralExpression) and \
+          issubclass(type(right), MultiplicationExpression) and \
+          issubclass(type(right.left), LiteralExpression):
+        return expand(
+          LiteralExpression(left.value * right.left.value) * right.right)
+      elif issubclass(type(right), AdditionExpression):
+        return expand(left * right.left + left * right.right)
+      elif left == expression.left and right == expression.right:
+        return expression
       return left * right
 
     def visit_division(self, expression):

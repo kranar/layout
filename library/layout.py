@@ -220,6 +220,9 @@ class Layout:
     system = width_system.merge(height_system).merge(rows_system).merge(
       columns_system)
     solution = solve(system)
+    print(system)
+    print('********************************')
+    print(solution)
     update_solution = False
     if 'width' in solution.inconsistencies:
       system = system.remove(width_system)

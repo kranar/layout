@@ -134,6 +134,13 @@ class Solution:
       self._inconsistencies == other._inconsistencies and \
       self._underdetermined == other._underdetermined
 
+  def __repr__(self):
+    return str(self)
+
+  def __str__(self):
+    return f'Solution(' \
+      f'{self._assignments}, {self._underdetermined}, {self._inconsistencies})'
+
 
 def collect_variables(statement):
   class Collector(StatementWalker):
@@ -156,7 +163,7 @@ def is_undefined(expression):
       if expression.right == LiteralExpression(0):
         self._is_undefined = True
         return
-      return StatementWalker.visit_division(expression)
+      return StatementWalker.visit_division(self, expression)
   walker = Walker()
   expression.visit(walker)
   return walker._is_undefined

@@ -3,6 +3,8 @@ from library import DivisionExpression
 from library import Equation
 from library import StatementVisitor
 from library import SubtractionExpression
+from library.literal_expression import LiteralExpression
+from library.multiplication_expression import MultiplicationExpression
 
 
 def normalize_division(expression):
@@ -33,37 +35,75 @@ def expand(expression):
       return expression
 
     def visit_addition(self, expression):
-      return expand(expression.left) + expand(expression.right)
+      left = expand(expression.left)
+      right = expand(expression.right)
+      if issubclass(type(left), AdditionExpression):
+        return expand(left.left + (left.right + right))
+      elif issubclass(type(left), LiteralExpression):
+        if issubclass(type(right), LiteralExpression):
+          return LiteralExpression(left.value + right.value)
+        return expand(right + left)
+      elif right == LiteralExpression(0):
+        return left
+      if left == expression.left and right == expression.right:
+        return expression
+      return left + right
 
     def visit_subtraction(self, expression):
-      return expand(expression.left) - expand(expression.right)
+      left = expand(expression.left)
+      right = expand(expression.right)
+      return expand(left + -1 * right)
 
     def visit_multiplication(self, expression):
+      left = expand(expression.left)
+      right = expand(expression.right)
+      if issubclass(type(left), LiteralExpression) and \
+          issubclass(type(right), LiteralExpression):
+        return LiteralExpression(left.value * right.value)
+      elif left == LiteralExpression(1):
+        return right
+      elif right == LiteralExpression(1):
+        return left
+      elif left == LiteralExpression(0) or right == LiteralExpression(0):
+        return LiteralExpression(0)
+      elif left == LiteralExpression(-1) and \
+          issubclass(type(right), MultiplicationExpression):
+        if right.left == LiteralExpression(-1):
+          return expand(right.right)
+        elif right.right == LiteralExpression(-1):
+          return expand(right.left)
+      elif right == LiteralExpression(-1) and \
+          issubclass(type(left), MultiplicationExpression):
+        if left.left == LiteralExpression(-1):
+          return expand(left.right)
+        elif left.right == LiteralExpression(-1):
+          return expand(left.left)
       distributive_operators = [AdditionExpression, SubtractionExpression]
-      operation = type(expression.right)
+      operation = type(right)
       if operation in distributive_operators:
-        return expand(operation((expression.left * expression.right.left),
-          (expression.left * expression.right.right)))
-      elif type(expression.left) in distributive_operators:
-        return expand(expression.right * expression.left)
-      else:
-        result = expand(expression.left) * expand(expression.right)
-        if type(result.left) in distributive_operators or \
-            type(result.right) in distributive_operators:
-          return expand(result)
-        return result
+        return expand(operation(left * right.left, left * right.right))
+      elif type(left) in distributive_operators:
+        return expand(right * left)
+      return left * right
 
     def visit_division(self, expression):
+      left = expand(expression.left)
+      right = expand(expression.right)
+      if issubclass(type(left), LiteralExpression) and \
+          issubclass(type(right), LiteralExpression) and \
+            right != LiteralExpression(0):
+        return LiteralExpression(left.value / right.value)
+      elif left == LiteralExpression(0):
+        return LiteralExpression(0)
+      elif right == LiteralExpression(1):
+        return left
+      elif right == LiteralExpression(-1):
+        return expand(-1 * left)
       distributive_operators = [AdditionExpression, SubtractionExpression]
-      operation = type(expression.left)
+      operation = type(left)
       if operation in distributive_operators:
-        return expand(operation((expression.left.left / expression.right),
-          (expression.left.right / expression.right)))
-      else:
-        result = expand(expression.left) / expand(expression.right)
-        if type(result.left) in distributive_operators:
-          return expand(result)
-        return result
+        return expand(operation(left.left / right, left.right / right))
+      return left / right
   return normalize_division(expression.visit(Visitor()))
 
 

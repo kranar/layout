@@ -209,6 +209,7 @@ def isolate(variable, equation):
 
 
 def make_substituted_system(variable, system):
+  print(expand(system.constraints[0].expression))
   substitution = isolate(
     variable, Equation(expand(system.constraints[0].expression)))
   substitutions = []

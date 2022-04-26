@@ -29,17 +29,19 @@ class ManipulationsTester(unittest.TestCase):
   def test_repeated_distribute_multiplication_over_addition(self):
     expression = (a + b) * (x + y)
     expansion = expand(expression)
-    self.assertEqual(expansion, (x * a + x * b) + (y * a + y * b))
+    print(expansion)
+    self.assertEqual(expansion, a * x + ((a * y) + ((b * x) + (b * y))))
 
   def test_distribute_multiplication_over_subtraction(self):
     expression = x * (y - z)
     expansion = expand(expression)
-    self.assertEqual(expansion, x * y - x * z)
+    self.assertEqual(expansion, x * y + (-1 * (x * z)))
 
   def test_repeated_distribute_multiplication_over_subtraction(self):
     expression = (a - b) * (x - y)
     expansion = expand(expression)
-    self.assertEqual(expansion, (x * a - x * b) - (y * a - y * b))
+    self.assertEqual(
+      expansion, a * x + (-1 * (a * y) + (-1 * (b * x) + (b * y))))
 
   def test_distribute_division_over_addition(self):
     expression = (a + b) / (x + y)
@@ -49,17 +51,18 @@ class ManipulationsTester(unittest.TestCase):
   def test_distribute_division_over_subtraction(self):
     expression = (a - b) / (x + y)
     expansion = expand(expression)
-    self.assertEqual(expansion, a / (x + y) - b / (x + y))
+    self.assertEqual(expansion, a / (x + y) + (-1 * b) / (x + y))
 
   def test_distribute_addition(self):
     expression = (x * (y + z)) + (a * (b + c))
     expansion = expand(expression)
-    self.assertEqual(expansion, (x * y + x * z) + (a * b + a * c))
+    self.assertEqual(expansion, x * y + (x * z + (a * b + (a * c))))
 
   def test_distribute_subtraction(self):
     expression = (x * (y + z)) - (a * (b + c))
     expansion = expand(expression)
-    self.assertEqual(expansion, (x * y + x * z) - (a * b + a * c))
+    self.assertEqual(
+      expansion, x * y + ((x * z) + ((-1 * (a * b)) + (-1 * (a * c)))))
 
   def test_literal_substitution(self):
     expression = LiteralExpression(5)

@@ -205,12 +205,11 @@ def isolate(variable, equation):
     numerator = LiteralExpression(0)
   if denominator is None:
     denominator = LiteralExpression(1)
-  return numerator / denominator
+  return expand(numerator / denominator)
 
 
 def make_substituted_system(variable, system):
-  substitution = isolate(
-    variable, Equation(expand(system.constraints[0].expression)))
+  substitution = isolate(variable, system.constraints[0])
   substitutions = []
   is_consistent = True
   for constraint in system.constraints[1:]:

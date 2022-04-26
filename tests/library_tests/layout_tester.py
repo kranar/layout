@@ -138,5 +138,6 @@ class LayoutTester(unittest.TestCase):
     d.left = 150
     self.assertEqual(layout.items, [a, b, c, d])
 
+
 if __name__ == '__main__':
   unittest.main()

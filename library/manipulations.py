@@ -37,8 +37,13 @@ def expand(expression):
     def visit_addition(self, expression):
       left = expand(expression.left)
       right = expand(expression.right)
-      if issubclass(type(left), AdditionExpression):
-        return expand(left.left + (left.right + right))
+      if issubclass(type(right), AdditionExpression):
+        return expand((left + right.left) + right.right)
+      elif issubclass(type(left), AdditionExpression) and \
+          issubclass(type(left.right), LiteralExpression):
+        if issubclass(type(right), LiteralExpression):
+          return expand(left.left + (left.right.value + right.value))
+        return expand(left.left + right + left.right)
       elif issubclass(type(left), LiteralExpression):
         if issubclass(type(right), LiteralExpression):
           return LiteralExpression(left.value + right.value)
@@ -57,8 +62,8 @@ def expand(expression):
     def visit_multiplication(self, expression):
       left = expand(expression.left)
       right = expand(expression.right)
-      if issubclass(type(left), MultiplicationExpression):
-        return expand(left.left * (left.right * right))
+      if issubclass(type(right), MultiplicationExpression):
+        return expand((left * right.left) * right.right)
       elif issubclass(type(left), DivisionExpression):
         return expand((left.left * right) / left.right)
       elif issubclass(type(right), LiteralExpression):
@@ -69,9 +74,6 @@ def expand(expression):
         return right
       elif left == LiteralExpression(0):
         return LiteralExpression(0)
-      elif issubclass(type(right), MultiplicationExpression) and \
-          issubclass(type(right.left), LiteralExpression):
-        return expand((right.left * left) * right.right)
       elif issubclass(type(left), AdditionExpression):
         return expand(left.left * right + left.right * right)
       elif issubclass(type(right), AdditionExpression):

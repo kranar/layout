@@ -29,19 +29,17 @@ class ManipulationsTester(unittest.TestCase):
   def test_repeated_distribute_multiplication_over_addition(self):
     expression = (a + b) * (x + y)
     expansion = expand(expression)
-    print(expansion)
-    self.assertEqual(expansion, a * x + ((a * y) + ((b * x) + (b * y))))
+    self.assertEqual(expansion, a * x + a * y + b * x + b * y)
 
   def test_distribute_multiplication_over_subtraction(self):
     expression = x * (y - z)
     expansion = expand(expression)
-    self.assertEqual(expansion, x * y + (-1 * (x * z)))
+    self.assertEqual(expansion, x * y + -1 * x * z)
 
   def test_repeated_distribute_multiplication_over_subtraction(self):
     expression = (a - b) * (x - y)
     expansion = expand(expression)
-    self.assertEqual(
-      expansion, a * x + (-1 * (a * y) + (-1 * (b * x) + (b * y))))
+    self.assertEqual(expansion, a * x + -1 * a * y + -1 * b * x + b * y)
 
   def test_distribute_division_over_addition(self):
     expression = (a + b) / (x + y)
@@ -51,18 +49,47 @@ class ManipulationsTester(unittest.TestCase):
   def test_distribute_division_over_subtraction(self):
     expression = (a - b) / (x + y)
     expansion = expand(expression)
-    self.assertEqual(expansion, a / (x + y) + (-1 * b) / (x + y))
+    self.assertEqual(expansion, a / (x + y) + -1 * b / (x + y))
 
   def test_distribute_addition(self):
     expression = (x * (y + z)) + (a * (b + c))
     expansion = expand(expression)
-    self.assertEqual(expansion, x * y + (x * z + (a * b + (a * c))))
+    self.assertEqual(expansion, x * y + x * z + a * b + a * c)
 
   def test_distribute_subtraction(self):
     expression = (x * (y + z)) - (a * (b + c))
     expansion = expand(expression)
-    self.assertEqual(
-      expansion, x * y + ((x * z) + ((-1 * (a * b)) + (-1 * (a * c)))))
+    self.assertEqual(expansion, x * y + x * z + -1 * a * b + -1 * a * c)
+
+  def test_normalizing_term_constants(self):
+    expression = x * 5
+    expansion = expand(expression)
+    self.assertEqual(expansion, 5 * x)
+
+  def test_propagating_term_constants(self):
+    expression = x * y * 5
+    expansion = expand(expression)
+    self.assertEqual(expansion, 5 * x * y)
+
+  def test_extracting_term_constants(self):
+    expression = x * 5 * y
+    expansion = expand(expression)
+    self.assertEqual(expansion, 5 * x * y)
+
+  def test_normalizing_constant_terms(self):
+    expression = 5 + y
+    expansion = expand(expression)
+    self.assertEqual(expansion, y + 5)
+
+  def test_propagating_constant_terms(self):
+    expression = 5 + x + y
+    expansion = expand(expression)
+    self.assertEqual(expansion, x + y + 5)
+
+  def test_extracting_constant_terms(self):
+    expression = x + 5 + y
+    expansion = expand(expression)
+    self.assertEqual(expansion, x + y + 5)
 
   def test_literal_substitution(self):
     expression = LiteralExpression(5)

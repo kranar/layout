@@ -266,8 +266,7 @@ def solve_equation(equation):
   while len(variables) != 0:
     variable = variables.pop()
     expression = isolate(variable, equation)
-    if issubclass(type(expression), DivisionExpression) and \
-        evaluate(expression.right) == 0:
+    if expression is None:
       underdetermined.add(variable)
     else:
       expressions[variable] = expression

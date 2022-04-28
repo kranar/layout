@@ -92,7 +92,7 @@ def expand(expression):
           issubclass(type(right), LiteralExpression) and \
             right != LiteralExpression(0):
         return LiteralExpression(left.value / right.value)
-      elif left == LiteralExpression(0):
+      elif left == LiteralExpression(0) and right != LiteralExpression(0):
         return LiteralExpression(0)
       elif right == LiteralExpression(1):
         return left

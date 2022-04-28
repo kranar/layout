@@ -20,53 +20,42 @@ class SolverTester(unittest.TestCase):
     self.assertEqual(actual.inconsistencies, expected.inconsistencies)
     self.assertEqual(actual.underdetermined, expected.underdetermined)
 
+  def test_isolate_zero_coefficient(self):
+    expression = Equation(x + y - x)
+    x_isolate = isolate('x', expression)
+    self.assertEqual(x_isolate, None)
+
+  def test_composite_isolate_zero_coefficient(self):
+    expression = Equation((x + y) - (x + 200.0))
+    x_isolate = isolate('x', expression)
+    self.assertEqual(x_isolate, None)
+
   def test_solve_single_variable(self):
-    equations = []
-    equations.append(Equation(x))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(x))
     self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_addition(self):
-    equations = []
-    equations.append(Equation(x + 5))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(x + 5))
     self.assertSolutionEqual(solution, Solution({'x': -5}))
 
   def test_solve_single_variable_subtraction(self):
-    equations = []
-    equations.append(Equation(x - 5))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(x - 5))
     self.assertSolutionEqual(solution, Solution({'x': 5}))
 
   def test_solve_single_variable_multiplication(self):
-    equations = []
-    equations.append(Equation(3 * x))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(3 * x))
     self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_division(self):
-    equations = []
-    equations.append(Equation(x / 6))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(x / 6))
     self.assertSolutionEqual(solution, Solution({'x': 0}))
 
   def test_solve_single_variable_multiply_and_add(self):
-    equations = []
-    equations.append(Equation(2 * x - 6))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(2 * x - 6))
     self.assertSolutionEqual(solution, Solution({'x': 3}))
 
   def test_solve_single_variable_collect_terms(self):
-    equations = []
-    equations.append(Equation(2 * x - 6 * x + 12))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(2 * x - 6 * x + 12))
     self.assertSolutionEqual(solution, Solution({'x': 3}))
 
   def test_solve_two_variables(self):
@@ -134,17 +123,15 @@ class SolverTester(unittest.TestCase):
       solution, Solution({'z': 3}, inconsistencies={'x', 'y'}))
 
   def test_underdetermined_solution(self):
-    equations = []
-    equations.append(Equation(x + y))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(2 * x - 2 * x))
+    self.assertSolutionEqual(solution, Solution(underdetermined={'x'}))
+
+  def test_multivariable_underdetermined_solution(self):
+    solution = solve_equation(Equation(x + y))
     self.assertSolutionEqual(solution, Solution(underdetermined={'x', 'y'}))
 
   def test_underdetermined_solution_with_cancelling(self):
-    equations = []
-    equations.append(Equation(x + y - y + 5))
-    system = ConstraintSystem(equations)
-    solution = solve(system)
+    solution = solve_equation(Equation(x + y - y + 5))
     self.assertSolutionEqual(
       solution, Solution({'x': -5}, underdetermined={'y'}))
 
@@ -223,17 +210,6 @@ class SolverTester(unittest.TestCase):
     self.assertFalse(solution.is_inconsistent)
 
   def test_mixed_equation(self):
-    system = ConstraintSystem([Equation(x + y + y - 2 * y - 5)])
-    solution = solve(system)
+    solution = solve_equation(Equation(x + y + y - 2 * y - 5))
     self.assertSolutionEqual(
       solution, Solution({x.name: 5}, underdetermined={y.name}))
-
-  def test_isolate_zero_coefficient(self):
-    expression = Equation(x + y - x)
-    x_isolate = isolate('x', expression)
-    self.assertEqual(x_isolate, None)
-
-  def test_composite_isolate_zero_coefficient(self):
-    expression = Equation((x + y) - (x + 200.0))
-    x_isolate = isolate('x', expression)
-    self.assertEqual(x_isolate, None)

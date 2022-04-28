@@ -4,7 +4,6 @@ from library import *
 
 
 class LayoutTester(unittest.TestCase):
-  '''
   def test_single_fixed_solution(self):
     a = LayoutItem('A', 0, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
     layout = Layout([a], [])
@@ -66,7 +65,6 @@ class LayoutTester(unittest.TestCase):
     b.left = 200
     b.width = 300
     self.assertEqual(layout.items, [a, b])
-  '''
 
   def test_mixed_row(self):
     a = LayoutItem(
@@ -89,7 +87,6 @@ class LayoutTester(unittest.TestCase):
     c.left = 350
     self.assertEqual(layout.items, [a, b, c])
 
-  '''
   def test_two_fixed_rows(self):
     a = LayoutItem('A', 0, 0, 100, LayoutPolicy.FIXED, 100, LayoutPolicy.FIXED)
     b = LayoutItem(
@@ -159,7 +156,6 @@ class LayoutTester(unittest.TestCase):
     c.left = 350
     d.left = 150
     self.assertEqual(layout.items, [a, b, c, d])
-  '''
 
 
 if __name__ == '__main__':

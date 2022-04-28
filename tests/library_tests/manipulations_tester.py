@@ -117,7 +117,3 @@ class ManipulationsTester(unittest.TestCase):
       self.assertEqual(left_substitution, operation(replacement, y))
       right_substitution = substitute(y.name, replacement, expression)
       self.assertEqual(right_substitution, operation(x, replacement))
-
-
-if __name__ == '__main__':
-  unittest.main()

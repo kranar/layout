@@ -237,7 +237,3 @@ class SolverTester(unittest.TestCase):
     expression = Equation((x + y) - (x + 200.0))
     x_isolate = isolate('x', expression)
     self.assertEqual(x_isolate, None)
-
-
-if __name__ == '__main__':
-  unittest.main()

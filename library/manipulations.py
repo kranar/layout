@@ -1,10 +1,9 @@
 from library import AdditionExpression
 from library import DivisionExpression
 from library import Equation
+from library import LiteralExpression
+from library import MultiplicationExpression
 from library import StatementVisitor
-from library import SubtractionExpression
-from library.literal_expression import LiteralExpression
-from library.multiplication_expression import MultiplicationExpression
 
 
 def normalize_division(expression):

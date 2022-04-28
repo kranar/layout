@@ -90,6 +90,7 @@ def build_span_system(items, width, height, direction):
   growth_equations = []
   if direction == Direction.HORIZONTAL:
     size = width
+    size_expression = VariableExpression('width')
     end = height
     get_item_span_start = lambda item: item.top
     get_item_span_end = lambda item: item.bottom
@@ -99,6 +100,7 @@ def build_span_system(items, width, height, direction):
     get_item_growth = lambda item: item.width_growth
   else:
     size = height
+    size_expression = VariableExpression('height')
     end = width
     get_item_span_start = lambda item: item.left
     get_item_span_end = lambda item: item.right
@@ -115,8 +117,6 @@ def build_span_system(items, width, height, direction):
         span_items.append(item)
         span_end = min(span_end, get_item_span_end(item))
     span_items.sort(key=get_item_start)
-    size_expression = VariableExpression(
-      'width' if direction == Direction.HORIZONTAL else 'height')
     growth_sum = LiteralExpression(-1)
     last_item = None
     total_size_expression = None

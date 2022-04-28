@@ -289,7 +289,9 @@ def solve(system):
   Takes a ConstraintSystem and returns a Solution that satisfies all of the
   system's equations.
   '''
-  if len(system.constraints) == 1:
+  if len(system.constraints) == 0:
+    return Solution()
+  elif len(system.constraints) == 1:
     return solve_equation(system.constraints[0])
   substituted_system = None
   variables = collect_variables(system.constraints[0])
